@@ -25,7 +25,6 @@ Version 1
 - AWP damage increased by 74%.
 - Hunter Claw damage reduced by 50%.
 - Disable bots shooting through the survivors.
-- Guard gamemode, allow only realism.
 */
 
 #include <sourcemod>
@@ -36,9 +35,11 @@ Version 1
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 
-#define DEBUG 0
+#define DEBUG_DAMAGE_MOD 0
+#define DEBUG_SI_SPAWN 0
+#define DEBUG_TANK_HP 0
 
 //teams
 #define TEAM_SURVIVORS 2
@@ -106,9 +107,6 @@ const float weapon_sniper_military = 1.12;
 const float weapon_sniper_awp = 1.74;
 const float weapon_hunter_claw = 0.5;
 
-//allow only realism
-bool is_rejected;
-
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
 	author = "Garamond",
@@ -156,38 +154,6 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
 }
 
-public void OnMapStart()
-{
-	char mp_gamemode[32];
-	GetConVarString(FindConVar("mp_gamemode"), mp_gamemode, sizeof(mp_gamemode));
-	if (!strcmp(mp_gamemode, "realism"))
-		is_rejected = false;
-	else {
-		is_rejected = true;
-		CreateTimer(1.0, changelevel);
-	}
-}
-
-public Action changelevel(Handle timer)
-{
-	ServerCommand("sm_cvar mp_gamemode realism; changelevel c1m1_hotel");
-	return Plugin_Continue;
-}
-
-public bool OnClientConnect(int client, char[] rejectmsg, int maxlength)
-{
-	//check do we have to reject connections with reject message
-	if (is_rejected && !IsFakeClient(client)) {
-
-		//dot at the end of the message will be auto added
-		strcopy(rejectmsg, maxlength, "Server doesn't support this gamemode. Only realism is supported");
-		
-		return false;
-	}
-
-	return true;
-}
-
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage);
@@ -211,7 +177,7 @@ public Action on_take_damage(int victim, int& attacker, int& inflictor, float& d
 		if (GetTrieValue(h_weapon_trie, classname, mod)) {
 			damage *= mod;
 
-			#if DEBUG
+			#if DEBUG_DAMAGE_MOD
 			PrintToChatAll("[HR] Damage of %s modded by [%f] to %f", classname, mod, damage);
 			#endif
 
@@ -224,7 +190,7 @@ public Action on_take_damage(int victim, int& attacker, int& inflictor, float& d
 
 public void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
 {
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] event_player_left_safe_area()");
 	#endif
 
@@ -251,7 +217,7 @@ void survivor_check()
 		si_spawn_size_max = si_limit;
 	si_spawn_time_max = si_spawn_time_limit - si_spawn_time_per_survivor * alive_survivors;
 
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i; si_spawn_size_max = %i; si_spawn_time_max = %f", alive_survivors, si_spawn_size_max, si_spawn_time_max);
 	#endif
 }
@@ -263,7 +229,7 @@ void start_spawn_timer()
 	h_spawn_timer = CreateTimer(timer, auto_spawn_si);
 	is_spawn_timer_started = true;
 
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] start_spawn_timer(): si_spawn_time_max = %f; timer = %f", si_spawn_time_max, timer);
 	#endif
 }
@@ -291,7 +257,7 @@ void spawn_si()
 	//early return if limit is reached
 	if (si_total_count >= si_limit) {
 
-		#if DEBUG
+		#if DEBUG_SI_SPAWN
 		PrintToConsoleAll("[HR] spawn_si(): si_total_count = %i; return", si_total_count);
 		#endif
 
@@ -304,7 +270,7 @@ void spawn_si()
 	if (si_spawn_size_min < size)
 		size = GetRandomInt(si_spawn_size_min, size);
 
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] spawn_si(): si_total_count = %i; size = %i", si_total_count, size);
 	#endif
 	
@@ -374,13 +340,13 @@ int get_si_index()
 		int tmp_count = si_type_counts[i];
 		tmp_weights[i] = si_spawn_weights[i];
 		while (tmp_count) {
-			tmp_weights[i] = RoundToCeil(float(tmp_weights[i]) * si_spawn_weight_reduction_factors[i]);
+			tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_reduction_factors[i]);
 			tmp_count--;
 		}
 		tmp_wsum += tmp_weights[i];
 	}
 
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	for (int i = 0; i < SI_TYPES; i++)
 		PrintToConsoleAll("[HR] get_si_index(): tmp_weights[%i] = %i", i, tmp_weights[i]);
 	#endif
@@ -400,8 +366,8 @@ int get_si_index()
 			}
 		}
 
-		#if DEBUG
-		PrintToConsoleAll("[HR] get_si_index(): range = %i; tmp_wsum = %i; index = %i", range, tmp_wsum, index);
+		#if DEBUG_SI_SPAWN
+		PrintToConsoleAll("[HR] get_si_index(): retries = %i; range = %i; tmp_wsum = %i; index = %i", retries, range, tmp_wsum, index);
 		#endif
 
 		if (si_type_counts[index] < si_spawn_limits[index]) {
@@ -419,8 +385,14 @@ public Action z_spawn_old(Handle timer, any data)
 	int client = get_random_alive_survivor();
 	
 	//early return on invalid client
-	if (!client)
+	if (!client) {
+
+		#if DEBUG_SI_SPAWN
+		PrintToConsoleAll("[HR] z_spawn_old(): INVALID CLIENT!");
+		#endif
+		
 		return Plugin_Continue;
+	}
 	
 	//create infected bot
 	//without this we may not be able to spawn our special infected
@@ -443,7 +415,7 @@ public Action z_spawn_old(Handle timer, any data)
 	//restore command flags
 	SetCommandFlags(command, flags);
 
-	#if DEBUG
+	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] z_spawn_old(): client = %i; z_spawns[%i] = %s", client, data, z_spawns[data]);
 	#endif
 
@@ -483,7 +455,7 @@ public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	SetConVarInt(FindConVar("tank_burn_duration_hard"), RoundToNearest(float(hp) * 0.02125));
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(hp) * 0.02));
 
-	#if DEBUG
+	#if DEBUG_TANK_HP
 	PrintToConsoleAll("tank hp is %i", GetConVarInt(FindConVar("z_tank_health")));
 	PrintToConsoleAll("tank burn time normal is %i", GetConVarInt(FindConVar("tank_burn_duration")));
 	PrintToConsoleAll("tank burn time hard is %i", GetConVarInt(FindConVar("tank_burn_duration_hard")));
