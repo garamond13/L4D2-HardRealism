@@ -6,6 +6,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 1.1.1
+- Small change, has no effect.
+
 Version 1.1.0
 - Remove gamemode guard.
 - Improve debug.
