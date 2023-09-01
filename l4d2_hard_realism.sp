@@ -35,7 +35,7 @@ Version 1
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
@@ -99,13 +99,7 @@ bool is_spawn_timer_started;
 const int tank_hp_min = 3200;
 const int tank_hp_max = 16000;
 
-//damage mods
 Handle h_weapon_trie;
-const float weapon_rifle = 1.07;
-const float weapon_hunting_rifle = 1.12;
-const float weapon_sniper_military = 1.12;
-const float weapon_sniper_awp = 1.74;
-const float weapon_hunter_claw = 0.5;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -119,11 +113,11 @@ public void OnPluginStart()
 {
 	//map weapon mods
 	h_weapon_trie = CreateTrie();
-	SetTrieValue(h_weapon_trie, "weapon_rifle", weapon_rifle);
-	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", weapon_hunting_rifle);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_military", weapon_sniper_military);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", weapon_sniper_awp);
-	SetTrieValue(h_weapon_trie, "weapon_hunter_claw", weapon_hunter_claw);
+	SetTrieValue(h_weapon_trie, "weapon_rifle", 1.07);
+	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 1.12);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 1.12);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 1.74);
+	SetTrieValue(h_weapon_trie, "weapon_hunter_claw", 0.5);
 
 	//hook game events
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
