@@ -1,20 +1,19 @@
 /*
 Version description / Changelog
 
-Note: SI order = smoker, boomer, hunter, spitter, jockey, charger
+Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 1
-
-- Tank health is randomized in the range [3200, 16000].
+Version 1:
+- Tank health is randomized in the range [6400, 32000].
 - Jockey health is set to 300.
 - Charger health is set to 575.
 - Special infected limit is 5.
 - Special infected spawn size minimum is 2.
 - Special infected spawn size maximum is 5.
 - Special infected spawn size increase per alive survivor is 1.
-- Special infected spawn limits in SI order 2, 1, 2, 1, 2, 2
-- Special infected spawn weights in SI order 100, 100, 100, 100, 90, 100
-- Special infected spawn weight reduction factors in SI order 0.6, 1.0, 0.6, 1.0, 0.6, 0.6
+- Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
+- Special infected spawn weights in the SI order are 100, 100, 100, 100, 90, 100.
+- Special infected spawn weight reduction factors in the SI order are 0.6, 1.0, 0.6, 1.0, 0.6, 0.6.
 - Special infected minimum spawn time is 15s.
 - Special infected spawn time limit is 67s.
 - Special infected spawn time reduction per alive survivor is 4.25s.
@@ -35,7 +34,7 @@ Version 1
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.1.1"
+#define VERSION "1.2.0"
 
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
@@ -96,8 +95,8 @@ bool is_spawn_timer_started;
 //
 
 //tank hp
-const int tank_hp_min = 3200;
-const int tank_hp_max = 16000;
+const int tank_hp_min = 6400;
+const int tank_hp_max = 32000;
 
 Handle h_weapon_trie;
 
@@ -193,7 +192,7 @@ public void event_player_left_safe_area(Event event, const char[] name, bool don
 
 public void survivor_check_on_event(Event event, const char[] name, bool dontBroadcast)
 {
-	int client = GetClientOfUserId(event.GetInt("userid"));
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
 		survivor_check();
 }
@@ -439,21 +438,17 @@ public Action kick_bot(Handle timer, any data)
 public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int hp = GetRandomInt(tank_hp_min, tank_hp_max);
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	SetEntProp(client, Prop_Data, "m_iMaxHealth", hp);
+	SetEntProp(client, Prop_Data, "m_iHealth", hp);
 
-    //defualt 4000
-	SetConVarInt(FindConVar("z_tank_health"), hp);
-
-	//set burn times
-	//constant factros were calculated from default values
-	SetConVarInt(FindConVar("tank_burn_duration"), RoundToNearest(float(hp) * 0.01875));
-	SetConVarInt(FindConVar("tank_burn_duration_hard"), RoundToNearest(float(hp) * 0.02125));
-	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(hp) * 0.02));
+	//the constant factor was calculated from default values
+	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(hp) * 0.010625));
 
 	#if DEBUG_TANK_HP
-	PrintToConsoleAll("tank hp is %i", GetConVarInt(FindConVar("z_tank_health")));
-	PrintToConsoleAll("tank burn time normal is %i", GetConVarInt(FindConVar("tank_burn_duration")));
-	PrintToConsoleAll("tank burn time hard is %i", GetConVarInt(FindConVar("tank_burn_duration_hard")));
-	PrintToConsoleAll("tank burn time expert is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
+	PrintToConsoleAll("[HR] tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
+	PrintToConsoleAll("[HR] tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+	PrintToConsoleAll("[HR] tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
 	#endif
 }
 
