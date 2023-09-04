@@ -34,7 +34,7 @@ Version 1:
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.2.0"
+#define VERSION "1.2.1"
 
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
@@ -268,7 +268,7 @@ void spawn_si()
 	#endif
 	
 	float delay = 0.0;
-	while (size > 0) {
+	while (size) {
 		int index = get_si_index();
 
 		//break on ivalid index, since get_si_index() has 5 retries to give valid index
@@ -346,7 +346,7 @@ int get_si_index()
 
 	//get random index
 	int retries = 5;
-	while (retries > 0) {
+	while (retries) {
 		int index = GetRandomInt(1, tmp_wsum);
 
 		//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
@@ -390,10 +390,8 @@ public Action z_spawn_old(Handle timer, any data)
 	//create infected bot
 	//without this we may not be able to spawn our special infected
 	int bot = CreateFakeClient("Infected Bot");
-	if (bot) {
+	if (bot)
 		ChangeClientTeam(bot, TEAM_INFECTED);
-		CreateTimer(0.1, kick_bot, bot, TIMER_FLAG_NO_MAPCHANGE);
-	}
 
 	static const char command[] = "z_spawn_old";
 
@@ -412,6 +410,10 @@ public Action z_spawn_old(Handle timer, any data)
 	PrintToConsoleAll("[HR] z_spawn_old(): client = %i; z_spawns[%i] = %s", client, data, z_spawns[data]);
 	#endif
 
+	//kick bot
+	if (IsClientConnected(bot))
+		KickClient(bot);
+
 	return Plugin_Continue;
 }
 
@@ -426,13 +428,6 @@ int get_random_alive_survivor()
 		return clients[GetRandomInt(0, alive_survivors - 1)];
 	}
 	return 0;
-}
-
-public Action kick_bot(Handle timer, any data)
-{
-	if (IsClientInGame(data) && !IsClientInKickQueue(data) && IsFakeClient(data))
-		KickClient(data);
-	return Plugin_Continue;
 }
 
 public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
