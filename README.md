@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 1.2.2
+- Fix oversight.
+
 Version 1.2.1
 - Optimizations.
 
