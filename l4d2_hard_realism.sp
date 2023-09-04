@@ -34,7 +34,7 @@ Version 1:
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.2.1"
+#define VERSION "1.2.2"
 
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
@@ -411,7 +411,7 @@ public Action z_spawn_old(Handle timer, any data)
 	#endif
 
 	//kick bot
-	if (IsClientConnected(bot))
+	if (bot && IsClientConnected(bot))
 		KickClient(bot);
 
 	return Plugin_Continue;
