@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 1.2.1
+- Optimizations.
+
 Version 1.2.0
 - Change the way tank hp is set.
 - Additional small changes.
