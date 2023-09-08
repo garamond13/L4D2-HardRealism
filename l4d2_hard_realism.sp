@@ -1,23 +1,18 @@
 /*
-Version description / Changelog
+Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 1:
-- Tank health is randomized in the range [6400, 32000].
+Version 2:
+- Tank health is randomized and relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 575.
-- Special infected limit is 5.
-- Special infected spawn size minimum is 2.
-- Special infected spawn size maximum is 5.
-- Special infected spawn size increase per alive survivor is 1.
+- Special infected limit and max spawn size are relative to the number of alive survivors.
+- Special infected spawn sizes and times are random and relative to the number of alive survivors.
 - Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
 - Special infected spawn weights in the SI order are 100, 100, 100, 100, 90, 100.
-- Special infected spawn weight reduction factors in the SI order are 0.6, 1.0, 0.6, 1.0, 0.6, 0.6.
-- Special infected minimum spawn time is 15s.
-- Special infected spawn time limit is 67s.
-- Special infected spawn time reduction per alive survivor is 4.25s.
-- Special infected spawns are randomly delayed in the range [0.3s, 2.7s].
+- Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
+- Special infected spawns are randomly delayed in the range [0.3s, 2.4s].
 - M16 damage increased by 7%.
 - Hunting Rifle damage increased by 12%.
 - Military Sniper damage increased by 12%.
@@ -34,8 +29,9 @@ Version 1:
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "1.2.2"
+#define VERSION "2.0.0"
 
+//debug switches
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
 #define DEBUG_TANK_HP 0
@@ -56,7 +52,7 @@ Version 1:
 //
 
 //special infected types (for indexing)
-//keep same order as zombie classes
+//keep the same order as zombie classes
 #define SI_TYPES 6
 #define SI_SMOKER 0
 #define SI_BOOMER 1
@@ -65,24 +61,26 @@ Version 1:
 #define SI_JOCKEY 4
 #define SI_CHARGER 5
 
-//keep same order as zombie classes
-char z_spawns[SI_TYPES][8] = { "smoker", "boomer", "hunter", "spitter", "jockey", "charger" };
-int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
-int si_spawn_weights[SI_TYPES] = { 100, 100, 100, 100, 90, 100};
-float si_spawn_weight_reduction_factors[SI_TYPES] = { 0.6, 1.0, 0.6, 1.0, 0.6, 0.6 };
+#if DEBUG_SI_SPAWN
+//keep the same order as zombie classes
+static const char debug_si_indexes[SI_TYPES][] = { "SI_SMOKER", "SI_BOOMER", "SI_HUNTER", "SI_SPITTER", "SI_JOCKEY", "SI_CHARGER" };
+#endif
+
+//keep the same order as zombie classes
+static const char z_spawns[SI_TYPES][] = { "smoker", "boomer", "hunter", "spitter", "jockey", "charger" };
+static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
+static const int si_spawn_weights[SI_TYPES] = { 100, 100, 100, 100, 90, 100 };
+static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
+
+static const char command_z_spawn_old[] = "z_spawn_old";
 
 //size
-const int si_limit = 5;
-const int si_spawn_size_min = 2;
-int si_spawn_size_max;
+int si_limit;
+int si_spawn_size_min;
 
 //time
-const float si_spawn_time_min = 15.0;
+float si_spawn_time_min;
 float si_spawn_time_max;
-const float si_spawn_time_limit = 67.0;
-const float si_spawn_time_per_survivor = 4.25;
-const float si_spawn_delay_min = 0.3;
-const float si_spawn_delay_max = 2.7;
 
 int alive_survivors;
 int si_type_counts[SI_TYPES];
@@ -90,14 +88,15 @@ int si_total_count;
 
 //spawn timer
 Handle h_spawn_timer;
-bool is_spawn_timer_started;
+bool is_spawn_timer_running;
 
 //
 
 //tank hp
-const int tank_hp_min = 6400;
-const int tank_hp_max = 32000;
+int tank_hp_min;
+int tank_hp_max;
 
+//damage mod
 Handle h_weapon_trie;
 
 public Plugin myinfo = {
@@ -110,7 +109,7 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
-	//map weapon mods
+	//map damage mods
 	h_weapon_trie = CreateTrie();
 	SetTrieValue(h_weapon_trie, "weapon_rifle", 1.07);
 	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 1.12);
@@ -120,8 +119,8 @@ public void OnPluginStart()
 
 	//hook game events
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", survivor_check_on_event);
-	HookEvent("player_death", survivor_check_on_event);
+	HookEvent("player_spawn", event_player_spawn);
+	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
 	HookEvent("map_transition", event_round_end, EventHookMode_Pre);
@@ -161,7 +160,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 public Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	//attack with equipped weapon
-	if (attacker > 0 && attacker <= MaxClients && attacker == inflictor && IsClientInGame(attacker)) {
+	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && attacker == inflictor) {
 		char classname[32];
 		GetClientWeapon(inflictor, classname, sizeof(classname));
 
@@ -190,28 +189,73 @@ public void event_player_left_safe_area(Event event, const char[] name, bool don
 	start_spawn_timer();
 }
 
-public void survivor_check_on_event(Event event, const char[] name, bool dontBroadcast)
+public void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
+	if (client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
+
+		//count on the next frame, fixes miscount on idle
+		RequestFrame(survivor_check);
+
+	}
+}
+
+public void event_player_death(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	if (client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
 		survivor_check();
 }
 
-void survivor_check()
+public void survivor_check()
 {
 	//count alive survivors
 	alive_survivors = 0;
-	for (int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; ++i)
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
-			alive_survivors++;
+			++alive_survivors;
 	
-	si_spawn_size_max = si_spawn_size_min + alive_survivors;
-	if (si_spawn_size_max > si_limit)
-		si_spawn_size_max = si_limit;
-	si_spawn_time_max = si_spawn_time_limit - si_spawn_time_per_survivor * alive_survivors;
+	//set survior relative values
+	switch (alive_survivors) {
+		case 4: {
+			si_limit = 5;
+			si_spawn_size_min = 2;
+			si_spawn_time_min = 15.0;
+			si_spawn_time_max = 34.0;
+			tank_hp_min = 14300;
+			tank_hp_max = 32000;
+		}
+		case 3: {
+			si_limit = 5;
+			si_spawn_size_min = 2;
+			si_spawn_time_min = 17.0;
+			si_spawn_time_max = 38.0;
+			tank_hp_min = 10700;
+			tank_hp_max = 24000;
+		}
+		case 2: {
+			si_limit = 4;
+			si_spawn_size_min = 2;
+			si_spawn_time_min = 17.0;
+			si_spawn_time_max = 38.0;
+			tank_hp_min = 8000;
+			tank_hp_max = 16000;
+		}
+		case 1: {
+			si_limit = 2;
+			si_spawn_size_min = 1;
+			si_spawn_time_min = 17.0;
+			si_spawn_time_max = 38.0;
+			tank_hp_min = 4000;
+			tank_hp_max = 8000;
+		}
+	}
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i; si_spawn_size_max = %i; si_spawn_time_max = %f", alive_survivors, si_spawn_size_max, si_spawn_time_max);
+	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
+	PrintToConsoleAll("[HR] survivor_check(): si_spawn_size_min = %i; si_limit = %i", si_spawn_size_min, si_limit);
+	PrintToConsoleAll("[HR] survivor_check(): si_spawn_time_min = %f; si_spawn_time_max = %f", si_spawn_time_min, si_spawn_time_max);
+	PrintToConsoleAll("[HR] survivor_check(): tank_hp_min = %i; tank_hp_max = %i", tank_hp_min, tank_hp_max);
 	#endif
 }
 
@@ -220,24 +264,24 @@ void start_spawn_timer()
 	end_spawn_timer();
 	float timer = GetRandomFloat(si_spawn_time_min, si_spawn_time_max);
 	h_spawn_timer = CreateTimer(timer, auto_spawn_si);
-	is_spawn_timer_started = true;
+	is_spawn_timer_running = true;
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] start_spawn_timer(): si_spawn_time_max = %f; timer = %f", si_spawn_time_max, timer);
+	PrintToConsoleAll("[HR] start_spawn_timer(): si_spawn_time_min = %f; si_spawn_time_max = %f; timer = %f", si_spawn_time_min, si_spawn_time_max, timer);
 	#endif
 }
 
 void end_spawn_timer()
 {
-	if (is_spawn_timer_started) {
+	if (is_spawn_timer_running) {
 		CloseHandle(h_spawn_timer);
-		is_spawn_timer_started = false;
+		is_spawn_timer_running = false;
 	}
 }
 
 public Action auto_spawn_si(Handle timer)
 {
-	is_spawn_timer_started = false;
+	is_spawn_timer_running = false;
 	spawn_si();
 	start_spawn_timer();
 	return Plugin_Continue;
@@ -246,78 +290,75 @@ public Action auto_spawn_si(Handle timer)
 void spawn_si()
 {
 	count_si();
-
-	//early return if limit is reached
-	if (si_total_count >= si_limit) {
+	if (si_total_count < si_limit) {
+		
+		//set spawn size
+		int size = si_limit - si_total_count;
+		if (si_spawn_size_min < size)
+			size = GetRandomInt(si_spawn_size_min, size);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] spawn_si(): si_total_count = %i; return", si_total_count);
+		PrintToConsoleAll("[HR] spawn_si(): si_spawn_size_min = %i; si_limit = %i; si_total_count = %i; size = %i", si_spawn_size_min, si_limit, si_total_count, size);
 		#endif
 
-		return;
-	}
+		float delay = 0.0;
+		while (size) {
+			int index = get_si_index();
 
-	//set spawn size
-	int difference = si_limit - si_total_count;
-	int size = si_spawn_size_max > difference ? difference : si_spawn_size_max;
-	if (si_spawn_size_min < size)
-		size = GetRandomInt(si_spawn_size_min, size);
+			//break on ivalid index, since get_si_index() has 5 retries to give valid index
+			if (index < 0)
+				break;
+
+			//prevent instant spam of all specials at once
+			//min and max delays are chosen more for technical reasons than gameplay reasons
+			delay += GetRandomFloat(0.3, 2.4);
+			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
+
+			--size;
+		}
+	}
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] spawn_si(): si_total_count = %i; size = %i", si_total_count, size);
+	else
+		PrintToConsoleAll("[HR] spawn_si(): si_spawn_size_min = %i; si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_spawn_size_min, si_limit, si_total_count);
 	#endif
-	
-	float delay = 0.0;
-	while (size) {
-		int index = get_si_index();
-
-		//break on ivalid index, since get_si_index() has 5 retries to give valid index
-		if (index < 0)
-			break;
-		
-		//prevent instant spam of all specials at once
-		delay += GetRandomFloat(si_spawn_delay_min, si_spawn_delay_max);
-		CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
-
-		size--;
-	}
 }
 
 void count_si()
 {
 	//reset counts
 	si_total_count = 0;
-	for (int i = 0; i < SI_TYPES; i++)
+	for (int i = 0; i < SI_TYPES; ++i)
 		si_type_counts[i] = 0;
 
-	for (int i = 1; i <= MaxClients; i++) {
+	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 
 			//detect special infected type by zombie class
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
 				case SI_CLASS_SMOKER: {
-					si_type_counts[SI_SMOKER]++;
-					si_total_count++;
+					++si_type_counts[SI_SMOKER];
+					++si_total_count;
 				}
 				case SI_CLASS_BOOMER: {
-					si_type_counts[SI_BOOMER]++;
-					si_total_count++;
+					++si_type_counts[SI_BOOMER];
+					++si_total_count;
 				}
 				case SI_CLASS_HUNTER: {
-					si_type_counts[SI_HUNTER]++;
-					si_total_count++;
+					++si_type_counts[SI_HUNTER];
+					++si_total_count;
 				}
 				case SI_CLASS_SPITTER: {
-					si_type_counts[SI_SPITTER]++;
-					si_total_count++;
+					++si_type_counts[SI_SPITTER];
+					++si_total_count;
 				}
 				case SI_CLASS_JOCKEY: {
-					si_type_counts[SI_JOCKEY]++;
-					si_total_count++;
+					++si_type_counts[SI_JOCKEY];
+					++si_total_count;
 				}
 				case SI_CLASS_CHARGER: {
-					si_type_counts[SI_CHARGER]++;
-					si_total_count++;
+					++si_type_counts[SI_CHARGER];
+					++si_total_count;
 				}
 			}
 		}
@@ -329,19 +370,19 @@ int get_si_index()
 	//calculate temporary weights and their weight sum, including reductions
 	int tmp_weights[SI_TYPES];
 	int tmp_wsum = 0;
-	for (int i = 0; i < SI_TYPES; i++) {
+	for (int i = 0; i < SI_TYPES; ++i) {
 		int tmp_count = si_type_counts[i];
 		tmp_weights[i] = si_spawn_weights[i];
 		while (tmp_count) {
-			tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_reduction_factors[i]);
-			tmp_count--;
+			tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
+			--tmp_count;
 		}
 		tmp_wsum += tmp_weights[i];
 	}
 
 	#if DEBUG_SI_SPAWN
-	for (int i = 0; i < SI_TYPES; i++)
-		PrintToConsoleAll("[HR] get_si_index(): tmp_weights[%i] = %i", i, tmp_weights[i]);
+	for (int i = 0; i < SI_TYPES; ++i)
+		PrintToConsoleAll("[HR] get_si_index(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
 	#endif
 
 	//get random index
@@ -351,7 +392,7 @@ int get_si_index()
 
 		//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
 		int range = 0;
-		for (int i = 0; i < SI_TYPES; i++) {
+		for (int i = 0; i < SI_TYPES; ++i) {
 			range += tmp_weights[i];
 			if (index <= range) {
 				index = i;
@@ -360,59 +401,58 @@ int get_si_index()
 		}
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] get_si_index(): retries = %i; range = %i; tmp_wsum = %i; index = %i", retries, range, tmp_wsum, index);
+		PrintToConsoleAll("[HR] get_si_index(): retries = %i; range = %i; tmp_wsum = %i; index = %s", retries, range, tmp_wsum, debug_si_indexes[index]);
 		#endif
 
 		if (si_type_counts[index] < si_spawn_limits[index]) {
-			si_type_counts[index]++;
+			++si_type_counts[index];
 			return index;
 		}
-		retries--;
+		--retries;
 	}
 
+	//indicates an invalid index
 	return -1;
 }
 
 public Action z_spawn_old(Handle timer, any data)
 {	
 	int client = get_random_alive_survivor();
-	
-	//early return on invalid client
-	if (!client) {
+	if (client) {
+		
+		//create infected bot
+		//without this we may not be able to spawn our special infected
+		int bot = CreateFakeClient("Infected Bot");
+		if (bot)
+			ChangeClientTeam(bot, TEAM_INFECTED);
+
+		//store command flags
+		int flags = GetCommandFlags(command_z_spawn_old);
+
+		//clear "sv_cheat" flag from the command
+		SetCommandFlags(command_z_spawn_old, flags & ~FCVAR_CHEAT);
+
+		FakeClientCommand(client, "%s %s auto", command_z_spawn_old, z_spawns[data]);
+
+		//restore command flags
+		SetCommandFlags(command_z_spawn_old, flags);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] z_spawn_old(): INVALID CLIENT!");
+		char buffer[32];
+		GetClientName(client, buffer, sizeof(buffer));
+		PrintToConsoleAll("[HR] z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, debug_si_indexes[data], z_spawns[data]);
 		#endif
-		
-		return Plugin_Continue;
+
+		//kick the bot
+		if (bot && IsClientConnected(bot))
+			KickClient(bot);
+
 	}
-	
-	//create infected bot
-	//without this we may not be able to spawn our special infected
-	int bot = CreateFakeClient("Infected Bot");
-	if (bot)
-		ChangeClientTeam(bot, TEAM_INFECTED);
-
-	static const char command[] = "z_spawn_old";
-
-	//store command flags
-	int flags = GetCommandFlags(command);
-	
-	//remove sv_cheat flag from the command
-	SetCommandFlags(command, flags & ~FCVAR_CHEAT);
-
-	FakeClientCommand(client, "%s %s auto", command, z_spawns[data]);
-	
-	//restore command flags
-	SetCommandFlags(command, flags);
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] z_spawn_old(): client = %i; z_spawns[%i] = %s", client, data, z_spawns[data]);
+	else
+		PrintToConsoleAll("[HR] z_spawn_old(): INVALID CLIENT!");
 	#endif
-
-	//kick bot
-	if (bot && IsClientConnected(bot))
-		KickClient(bot);
 
 	return Plugin_Continue;
 }
@@ -422,7 +462,7 @@ int get_random_alive_survivor()
 	if (alive_survivors) {
 		int[] clients = new int[alive_survivors];
 		int index = 0;
-		for (int i = 1; i <= MaxClients; i++)
+		for (int i = 1; i <= MaxClients; ++i)
 			if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
 				clients[index++] = i;
 		return clients[GetRandomInt(0, alive_survivors - 1)];
@@ -441,9 +481,10 @@ public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(hp) * 0.010625));
 
 	#if DEBUG_TANK_HP
-	PrintToConsoleAll("[HR] tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
-	PrintToConsoleAll("[HR] tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-	PrintToConsoleAll("[HR] tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp_min = %i; tank_hp_max = %i", tank_hp_min, tank_hp_max);
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
 	#endif
 }
 
