@@ -9,6 +9,12 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 2.0.0
+- General rework and gameplay changes.
+- Fix miscount of alive survivors on idle.
+- Micro optimizations.
+- Improve debug.
+
 Version 1.2.2
 - Fix oversight.
 
