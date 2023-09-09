@@ -29,7 +29,7 @@ Version 2:
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "2.0.0"
+#define VERSION "2.0.1"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -123,7 +123,6 @@ public void OnPluginStart()
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
-	HookEvent("map_transition", event_round_end, EventHookMode_Pre);
 }
 
 public void OnConfigsExecuted()
@@ -261,7 +260,6 @@ public void survivor_check()
 
 void start_spawn_timer()
 {
-	end_spawn_timer();
 	float timer = GetRandomFloat(si_spawn_time_min, si_spawn_time_max);
 	h_spawn_timer = CreateTimer(timer, auto_spawn_si);
 	is_spawn_timer_running = true;
@@ -269,14 +267,6 @@ void start_spawn_timer()
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] start_spawn_timer(): si_spawn_time_min = %f; si_spawn_time_max = %f; timer = %f", si_spawn_time_min, si_spawn_time_max, timer);
 	#endif
-}
-
-void end_spawn_timer()
-{
-	if (is_spawn_timer_running) {
-		CloseHandle(h_spawn_timer);
-		is_spawn_timer_running = false;
-	}
 }
 
 public Action auto_spawn_si(Handle timer)
@@ -496,4 +486,12 @@ public void event_round_end(Event event, const char[] name, bool dontBroadcast)
 public void OnMapEnd()
 {
 	end_spawn_timer();
+}
+
+void end_spawn_timer()
+{
+	if (is_spawn_timer_running) {
+		CloseHandle(h_spawn_timer);
+		is_spawn_timer_running = false;
+	}
 }
