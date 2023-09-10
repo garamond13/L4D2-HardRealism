@@ -3,8 +3,8 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 2:
-- Tank health is randomized and relative to the number of alive survivors.
+Version 3:
+- Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 575.
 - Special infected limit and max spawn size are relative to the number of alive survivors.
@@ -29,7 +29,7 @@ Version 2:
 #pragma newdecls required
 
 //MAJOR.MINOR.PATCH
-#define VERSION "2.0.1"
+#define VERSION "3.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -92,9 +92,8 @@ bool is_spawn_timer_running;
 
 //
 
-//tank hp
-int tank_hp_min;
-int tank_hp_max;
+//tank health
+int tank_hp;
 
 //damage mod
 Handle h_weapon_trie;
@@ -221,32 +220,28 @@ public void survivor_check()
 			si_spawn_size_min = 2;
 			si_spawn_time_min = 15.0;
 			si_spawn_time_max = 34.0;
-			tank_hp_min = 14300;
-			tank_hp_max = 32000;
+			tank_hp = 24000;
 		}
 		case 3: {
 			si_limit = 5;
 			si_spawn_size_min = 2;
 			si_spawn_time_min = 17.0;
 			si_spawn_time_max = 38.0;
-			tank_hp_min = 10700;
-			tank_hp_max = 24000;
+			tank_hp = 18000;
 		}
 		case 2: {
 			si_limit = 4;
 			si_spawn_size_min = 2;
 			si_spawn_time_min = 17.0;
 			si_spawn_time_max = 38.0;
-			tank_hp_min = 8000;
-			tank_hp_max = 16000;
+			tank_hp = 12000;
 		}
 		case 1: {
 			si_limit = 2;
 			si_spawn_size_min = 1;
 			si_spawn_time_min = 17.0;
 			si_spawn_time_max = 38.0;
-			tank_hp_min = 4000;
-			tank_hp_max = 8000;
+			tank_hp = 6000;
 		}
 	}
 
@@ -254,7 +249,7 @@ public void survivor_check()
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
 	PrintToConsoleAll("[HR] survivor_check(): si_spawn_size_min = %i; si_limit = %i", si_spawn_size_min, si_limit);
 	PrintToConsoleAll("[HR] survivor_check(): si_spawn_time_min = %f; si_spawn_time_max = %f", si_spawn_time_min, si_spawn_time_max);
-	PrintToConsoleAll("[HR] survivor_check(): tank_hp_min = %i; tank_hp_max = %i", tank_hp_min, tank_hp_max);
+	PrintToConsoleAll("[HR] survivor_check(): tank_hp = %i", tank_hp);
 	#endif
 }
 
@@ -462,16 +457,15 @@ int get_random_alive_survivor()
 
 public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
-	int hp = GetRandomInt(tank_hp_min, tank_hp_max);
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	SetEntProp(client, Prop_Data, "m_iMaxHealth", hp);
-	SetEntProp(client, Prop_Data, "m_iHealth", hp);
+	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
+	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
 	//the constant factor was calculated from default values
-	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(hp) * 0.010625));
+	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
 	#if DEBUG_TANK_HP
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp_min = %i; tank_hp_max = %i", tank_hp_min, tank_hp_max);
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
 	PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
 	PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
 	PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
