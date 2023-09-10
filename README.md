@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 3.0.0
+- Tank's hp is not randomized anymore.
+
 Version 2.0.1
 - Micro optimizations.
 
