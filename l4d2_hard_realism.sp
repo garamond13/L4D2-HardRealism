@@ -3,7 +3,7 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 3:
+Version 4:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 575.
@@ -28,8 +28,8 @@ Version 3:
 #pragma semicolon 1
 #pragma newdecls required
 
-//MAJOR.MINOR.PATCH
-#define VERSION "3.0.0"
+//MAJOR (gameplay change).MINOR.PATCH
+#define VERSION "4.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -218,8 +218,8 @@ public void survivor_check()
 		case 4: {
 			si_limit = 5;
 			si_spawn_size_min = 2;
-			si_spawn_time_min = 15.0;
-			si_spawn_time_max = 34.0;
+			si_spawn_time_min = 16.0;
+			si_spawn_time_max = 36.0;
 			tank_hp = 24000;
 		}
 		case 3: {
