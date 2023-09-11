@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 4.0.0
+- Increase special infected spawn times on 4 alive survivors.
+
 Version 3.0.0
 - Tank's hp is not randomized anymore.
 
