@@ -8,6 +8,8 @@ It is designed for Realism Expert, gamemode and difficulty.
 It doesn't require any config.
 
 ## Changelog
+Version 4.1.0
+- Add gamemode and difficulty guard. Allow only Realism Expert.
 
 Version 4.0.0
 - Increase special infected spawn times on 4 alive survivors.
