@@ -29,7 +29,7 @@ Version 4:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "4.0.0"
+#define VERSION "4.1.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -72,8 +72,6 @@ static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
 static const int si_spawn_weights[SI_TYPES] = { 100, 100, 100, 100, 90, 100 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
-static const char command_z_spawn_old[] = "z_spawn_old";
-
 //size
 int si_limit;
 int si_spawn_size_min;
@@ -97,6 +95,9 @@ int tank_hp;
 
 //damage mod
 Handle h_weapon_trie;
+
+//gamemode guard
+bool is_gamemode_rejected;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -122,6 +123,29 @@ public void OnPluginStart()
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
+
+	AddCommandListener(on_callvote, "callvote");
+	HookConVarChange(FindConVar("z_difficulty"), convar_change_z_difficulty);
+}
+
+public void OnMapStart()
+{
+	char buffer[32];
+	GetConVarString(FindConVar("mp_gamemode"), buffer, sizeof(buffer));
+	if (!strcmp(buffer, "realism")) {
+		SetConVarString(FindConVar("z_difficulty"), "Impossible");
+		is_gamemode_rejected = false;
+	}
+	else {
+		is_gamemode_rejected = true;
+		CreateTimer(1.0, changelevel, TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action changelevel(Handle timer)
+{
+	ServerCommand("sm_cvar mp_gamemode realism; changelevel c1m1_hotel");
+	return Plugin_Continue;
 }
 
 public void OnConfigsExecuted()
@@ -142,6 +166,35 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_spitter_limit"), 0);
 	SetConVarInt(FindConVar("z_jockey_limit"), 0);
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
+}
+
+Action on_callvote(int client, const char[] command, int argc)
+{
+	char buffer[32];
+	GetCmdArg(1, buffer, sizeof(buffer));
+	
+	//silenly disable ChangeDifficulty vote
+	if (!strcmp(buffer, "ChangeDifficulty"))
+		return Plugin_Handled;
+
+	return Plugin_Continue;
+}
+
+void convar_change_z_difficulty(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	SetConVarString(FindConVar("z_difficulty"), "Impossible");
+}
+
+public bool OnClientConnect(int client, char[] rejectmsg, int maxlength)
+{
+	if (is_gamemode_rejected && !IsFakeClient(client)) {
+
+		//a dot at the end of the message will be auto added
+		strcopy(rejectmsg, maxlength, "[HardRealism] Server doesn't support this gamemode. Only realism is supported");
+
+		return false;
+	}
+	return true;
 }
 
 public void OnClientPutInServer(int client)
@@ -412,15 +465,15 @@ public Action z_spawn_old(Handle timer, any data)
 			ChangeClientTeam(bot, TEAM_INFECTED);
 
 		//store command flags
-		int flags = GetCommandFlags(command_z_spawn_old);
+		int flags = GetCommandFlags("z_spawn_old");
 
 		//clear "sv_cheat" flag from the command
-		SetCommandFlags(command_z_spawn_old, flags & ~FCVAR_CHEAT);
+		SetCommandFlags("z_spawn_old", flags & ~FCVAR_CHEAT);
 
-		FakeClientCommand(client, "%s %s auto", command_z_spawn_old, z_spawns[data]);
+		FakeClientCommand(client, "z_spawn_old %s auto", z_spawns[data]);
 
 		//restore command flags
-		SetCommandFlags(command_z_spawn_old, flags);
+		SetCommandFlags("z_spawn_old", flags);
 
 		#if DEBUG_SI_SPAWN
 		char buffer[32];
