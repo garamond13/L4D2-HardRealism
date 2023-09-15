@@ -29,7 +29,7 @@ Version 4:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "4.1.0"
+#define VERSION "4.2.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -54,16 +54,16 @@ Version 4:
 //special infected types (for indexing)
 //keep the same order as zombie classes
 #define SI_TYPES 6
-#define SI_SMOKER 0
-#define SI_BOOMER 1
-#define SI_HUNTER 2
-#define SI_SPITTER 3
-#define SI_JOCKEY 4
-#define SI_CHARGER 5
+#define SI_INDEX_SMOKER 0
+#define SI_INDEX_BOOMER 1
+#define SI_INDEX_HUNTER 2
+#define SI_INDEX_SPITTER 3
+#define SI_INDEX_JOCKEY 4
+#define SI_INDEX_CHARGER 5
 
 #if DEBUG_SI_SPAWN
 //keep the same order as zombie classes
-static const char debug_si_indexes[SI_TYPES][] = { "SI_SMOKER", "SI_BOOMER", "SI_HUNTER", "SI_SPITTER", "SI_JOCKEY", "SI_CHARGER" };
+static const char debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_BOOMER", "SI_INDEX_HUNTER", "SI_INDEX_SPITTER", "SI_INDEX_JOCKEY", "SI_INDEX_CHARGER" };
 #endif
 
 //keep the same order as zombie classes
@@ -213,7 +213,7 @@ public Action on_take_damage(int victim, int& attacker, int& inflictor, float& d
 	//attack with equipped weapon
 	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && attacker == inflictor) {
 		char classname[32];
-		GetClientWeapon(inflictor, classname, sizeof(classname));
+		GetClientWeapon(attacker, classname, sizeof(classname));
 
 		//get damage modifier
 		float mod;
@@ -243,7 +243,7 @@ public void event_player_left_safe_area(Event event, const char[] name, bool don
 public void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
+	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
 
 		//count on the next frame, fixes miscount on idle
 		RequestFrame(survivor_check);
@@ -254,7 +254,7 @@ public void event_player_spawn(Event event, const char[] name, bool dontBroadcas
 public void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
+	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
 		survivor_check();
 }
 
@@ -349,7 +349,7 @@ void spawn_si()
 
 			//prevent instant spam of all specials at once
 			//min and max delays are chosen more for technical reasons than gameplay reasons
-			delay += GetRandomFloat(0.3, 2.4);
+			delay += GetRandomFloat(0.3, 2.2);
 			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
@@ -375,27 +375,27 @@ void count_si()
 			//detect special infected type by zombie class
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
 				case SI_CLASS_SMOKER: {
-					++si_type_counts[SI_SMOKER];
+					++si_type_counts[SI_INDEX_SMOKER];
 					++si_total_count;
 				}
 				case SI_CLASS_BOOMER: {
-					++si_type_counts[SI_BOOMER];
+					++si_type_counts[SI_INDEX_BOOMER];
 					++si_total_count;
 				}
 				case SI_CLASS_HUNTER: {
-					++si_type_counts[SI_HUNTER];
+					++si_type_counts[SI_INDEX_HUNTER];
 					++si_total_count;
 				}
 				case SI_CLASS_SPITTER: {
-					++si_type_counts[SI_SPITTER];
+					++si_type_counts[SI_INDEX_SPITTER];
 					++si_total_count;
 				}
 				case SI_CLASS_JOCKEY: {
-					++si_type_counts[SI_JOCKEY];
+					++si_type_counts[SI_INDEX_JOCKEY];
 					++si_total_count;
 				}
 				case SI_CLASS_CHARGER: {
-					++si_type_counts[SI_CHARGER];
+					++si_type_counts[SI_INDEX_CHARGER];
 					++si_total_count;
 				}
 			}
@@ -511,17 +511,24 @@ int get_random_alive_survivor()
 public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
-	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
+	if (client) {
+		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
+		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-	//the constant factor was calculated from default values
-	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
+		//the constant factor was calculated from default values
+		SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
+
+		#if DEBUG_TANK_HP
+		PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
+		PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
+		PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+		PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
+		#endif
+	}
 
 	#if DEBUG_TANK_HP
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
+	else
+		PrintToConsoleAll("[HR] event_tank_spawn(): CLIENT WAS ZERO!");
 	#endif
 }
 
