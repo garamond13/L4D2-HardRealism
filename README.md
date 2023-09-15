@@ -8,6 +8,12 @@ It is designed for Realism Expert, gamemode and difficulty.
 It doesn't require any config.
 
 ## Changelog
+
+Version 4.2.0
+- Reduce max spawn delay.
+- Check client validity on tank spawn.
+- Micro optimizations.
+  
 Version 4.1.0
 - Add gamemode and difficulty guard. Allow only Realism Expert.
 
