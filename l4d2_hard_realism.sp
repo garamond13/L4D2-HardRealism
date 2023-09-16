@@ -29,7 +29,7 @@ Version 4:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "4.2.0"
+#define VERSION "4.2.1"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -96,8 +96,9 @@ int tank_hp;
 //damage mod
 Handle h_weapon_trie;
 
-//gamemode guard
+//gamemode and difficulty guard
 bool is_gamemode_rejected;
+Handle h_z_difficulty;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -124,18 +125,19 @@ public void OnPluginStart()
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
 
+	//setup difficulty guard
+	h_z_difficulty = FindConVar("z_difficulty");
+	SetConVarString(h_z_difficulty, "Impossible");
+	HookConVarChange(h_z_difficulty, convar_change_z_difficulty);
 	AddCommandListener(on_callvote, "callvote");
-	HookConVarChange(FindConVar("z_difficulty"), convar_change_z_difficulty);
 }
 
 public void OnMapStart()
 {
 	char buffer[32];
 	GetConVarString(FindConVar("mp_gamemode"), buffer, sizeof(buffer));
-	if (!strcmp(buffer, "realism")) {
-		SetConVarString(FindConVar("z_difficulty"), "Impossible");
+	if (!strcmp(buffer, "realism"))
 		is_gamemode_rejected = false;
-	}
 	else {
 		is_gamemode_rejected = true;
 		CreateTimer(1.0, changelevel, TIMER_FLAG_NO_MAPCHANGE);
@@ -182,7 +184,7 @@ Action on_callvote(int client, const char[] command, int argc)
 
 void convar_change_z_difficulty(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	SetConVarString(FindConVar("z_difficulty"), "Impossible");
+	SetConVarString(h_z_difficulty, "Impossible");
 }
 
 public bool OnClientConnect(int client, char[] rejectmsg, int maxlength)
