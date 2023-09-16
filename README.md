@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 4.2.1
+- Small change.
+
 Version 4.2.0
 - Reduce max spawn delay.
 - Check client validity on tank spawn.
