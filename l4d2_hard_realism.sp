@@ -30,7 +30,7 @@ Version 5:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "5.0.0"
+#define VERSION "5.0.1"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -223,7 +223,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 public Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	//attack with equipped weapon
-	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && attacker == inflictor) {
+	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
 		char classname[32];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
