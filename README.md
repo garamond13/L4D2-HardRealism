@@ -9,6 +9,12 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 5.0.0
+- Rebalance special infected spawn weights.
+- Reduce jockey claw damage by 50%.
+- Reduce spawn times on 1 alive survivor.
+- Fix hunter pounce damage.
+
 Version 4.2.1
 - Small change.
 
