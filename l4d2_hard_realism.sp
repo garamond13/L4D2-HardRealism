@@ -3,14 +3,14 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 4:
+Version 5:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 575.
 - Special infected limit and max spawn size are relative to the number of alive survivors.
 - Special infected spawn sizes and times are random and relative to the number of alive survivors.
 - Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
-- Special infected spawn weights in the SI order are 100, 100, 100, 100, 90, 100.
+- Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special infected spawns are randomly delayed in the range [0.3s, 2.4s].
 - M16 damage increased by 7%.
@@ -18,6 +18,7 @@ Version 4:
 - Military Sniper damage increased by 12%.
 - AWP damage increased by 74%.
 - Hunter Claw damage reduced by 50%.
+- Jockey Claw damage reduced by 50%.
 - Disable bots shooting through the survivors.
 */
 
@@ -29,7 +30,7 @@ Version 4:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "4.2.1"
+#define VERSION "5.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -69,7 +70,7 @@ static const char debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_
 //keep the same order as zombie classes
 static const char z_spawns[SI_TYPES][] = { "smoker", "boomer", "hunter", "spitter", "jockey", "charger" };
 static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
-static const int si_spawn_weights[SI_TYPES] = { 100, 100, 100, 100, 90, 100 };
+static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
 //size
@@ -117,6 +118,7 @@ public void OnPluginStart()
 	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 1.12);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 1.74);
 	SetTrieValue(h_weapon_trie, "weapon_hunter_claw", 0.5);
+	SetTrieValue(h_weapon_trie, "weapon_jockey_claw", 0.5);
 
 	//hook game events
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
@@ -155,11 +157,19 @@ public void OnConfigsExecuted()
 	//defualt 325
 	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
+	//disable bots shooting through the survivors
+	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
+
 	//default 600
 	SetConVarInt(FindConVar("z_charger_health"), 575);
 
-	//disable bots shooting through the survivors
-	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
+	//default 5
+	//it will be halved by on_take_damage()
+	SetConVarInt(FindConVar("z_pounce_damage"), 10);
+
+	//default 4
+	//it will be halved by on_take_damage()
+	SetConVarInt(FindConVar("z_jockey_ride_damage"), 8);
 
 	//disbale director spawn special infected
 	SetConVarInt(FindConVar("z_smoker_limit"), 0);
@@ -294,8 +304,8 @@ public void survivor_check()
 		case 1: {
 			si_limit = 2;
 			si_spawn_size_min = 1;
-			si_spawn_time_min = 17.0;
-			si_spawn_time_max = 38.0;
+			si_spawn_time_min = 16.0;
+			si_spawn_time_max = 36.0;
 			tank_hp = 6000;
 		}
 	}
@@ -345,7 +355,7 @@ void spawn_si()
 		while (size) {
 			int index = get_si_index();
 
-			//break on ivalid index, since get_si_index() has 5 retries to give valid index
+			//break on ivalid index, since get_si_index() has retry attempts to provide a valid index
 			if (index < 0)
 				break;
 
@@ -426,7 +436,7 @@ int get_si_index()
 	#endif
 
 	//get random index
-	int retries = 5;
+	int retries = 6;
 	while (retries) {
 		int index = GetRandomInt(1, tmp_wsum);
 
