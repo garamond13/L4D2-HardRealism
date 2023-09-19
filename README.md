@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 6.0.0
+- Rebalance spawn times.
+
 Version 5.0.1
 - Small change.
 
