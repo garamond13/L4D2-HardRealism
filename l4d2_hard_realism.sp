@@ -3,12 +3,13 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 6:
+Version 7:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 575.
-- Special infected limit and max spawn size are relative to the number of alive survivors.
-- Special infected spawn sizes and times are random and relative to the number of alive survivors.
+- Special infected limit and maximum spawn size are relative to the number of alive survivors.
+- Special infected spawn size minimum is 2.
+- Special infected spawn sizes are random.
 - Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
@@ -30,7 +31,7 @@ Version 6:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "6.0.0"
+#define VERSION "7.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -73,16 +74,10 @@ static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
 static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
-//size
-int si_limit;
-
-//time
-float si_spawn_time_min;
-float si_spawn_time_max;
-
-int alive_survivors;
 int si_type_counts[SI_TYPES];
 int si_total_count;
+int alive_survivors;
+int si_limit;
 
 //spawn timer
 Handle h_spawn_timer;
@@ -281,26 +276,18 @@ public void survivor_check()
 	switch (alive_survivors) {
 		case 4: {
 			si_limit = 5;
-			si_spawn_time_min = 17.0;
-			si_spawn_time_max = 38.0;
 			tank_hp = 24000;
 		}
 		case 3: {
-			si_limit = 5;
-			si_spawn_time_min = 18.0;
-			si_spawn_time_max = 40.0;
+			si_limit = 4;
 			tank_hp = 18000;
 		}
 		case 2: {
-			si_limit = 4;
-			si_spawn_time_min = 17.0;
-			si_spawn_time_max = 38.0;
+			si_limit = 3;
 			tank_hp = 12000;
 		}
 		case 1: {
 			si_limit = 2;
-			si_spawn_time_min = 16.0;
-			si_spawn_time_max = 36.0;
 			tank_hp = 6000;
 		}
 	}
@@ -308,19 +295,18 @@ public void survivor_check()
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
 	PrintToConsoleAll("[HR] survivor_check(): si_limit = %i", si_limit);
-	PrintToConsoleAll("[HR] survivor_check(): si_spawn_time_min = %f; si_spawn_time_max = %f", si_spawn_time_min, si_spawn_time_max);
 	PrintToConsoleAll("[HR] survivor_check(): tank_hp = %i", tank_hp);
 	#endif
 }
 
 void start_spawn_timer()
 {
-	float timer = GetRandomFloat(si_spawn_time_min, si_spawn_time_max);
+	float timer = GetRandomFloat(17.0, 38.0);
 	h_spawn_timer = CreateTimer(timer, auto_spawn_si);
 	is_spawn_timer_running = true;
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] start_spawn_timer(): si_spawn_time_min = %f; si_spawn_time_max = %f; timer = %f", si_spawn_time_min, si_spawn_time_max, timer);
+	PrintToConsoleAll("[HR] start_spawn_timer(): timer = %f", timer);
 	#endif
 }
 
