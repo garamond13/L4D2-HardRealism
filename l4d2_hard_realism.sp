@@ -6,7 +6,7 @@ Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 Version 8:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
-- Charger health is set to 570.
+- Charger health is set to 573.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
 - Special infected spawn size minimum is 2.
 - Special infected spawn sizes are random.
