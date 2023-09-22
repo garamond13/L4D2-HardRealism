@@ -8,6 +8,10 @@ It is designed for Realism Expert, gamemode and difficulty.
 It doesn't require any config.
 
 ## Changelog
+
+Version 8.0.0
+- Reduce charger's health.
+
 Version 7.0.0
 - Rework and rebalance values relative to the alive survivors.
 
