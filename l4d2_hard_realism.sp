@@ -31,7 +31,7 @@ Version 8:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "8.0.1"
+#define VERSION "8.1.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -272,24 +272,8 @@ void survivor_check()
 			++alive_survivors;
 	
 	//set survior relative values
-	switch (alive_survivors) {
-		case 4: {
-			si_limit = 5;
-			tank_hp = 24000;
-		}
-		case 3: {
-			si_limit = 4;
-			tank_hp = 18000;
-		}
-		case 2: {
-			si_limit = 3;
-			tank_hp = 12000;
-		}
-		case 1: {
-			si_limit = 2;
-			tank_hp = 6000;
-		}
-	}
+	si_limit = alive_survivors + 1;
+	tank_hp = alive_survivors * 6000;
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);

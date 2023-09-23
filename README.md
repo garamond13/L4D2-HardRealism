@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 8.1.0
+- Small change.
+
 Version 8.0.1
 - Micro optimizations.
 
