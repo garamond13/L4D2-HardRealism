@@ -31,7 +31,7 @@ Version 8:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "8.0.0"
+#define VERSION "8.0.1"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -75,7 +75,6 @@ static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
 int si_type_counts[SI_TYPES];
-int si_total_count;
 int alive_survivors;
 int si_limit;
 
@@ -140,7 +139,7 @@ public void OnMapStart()
 	}
 }
 
-public Action changelevel(Handle timer)
+Action changelevel(Handle timer)
 {
 	ServerCommand("sm_cvar mp_gamemode realism; changelevel c1m1_hotel");
 	return Plugin_Continue;
@@ -214,7 +213,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage);
 }
 
-public Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	//attack with equipped weapon
 	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
@@ -237,7 +236,7 @@ public Action on_take_damage(int victim, int& attacker, int& inflictor, float& d
 	return Plugin_Continue;
 }
 
-public void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
+void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
 {
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] event_player_left_safe_area()");
@@ -246,7 +245,7 @@ public void event_player_left_safe_area(Event event, const char[] name, bool don
 	start_spawn_timer();
 }
 
-public void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
+void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
@@ -257,14 +256,14 @@ public void event_player_spawn(Event event, const char[] name, bool dontBroadcas
 	}
 }
 
-public void event_player_death(Event event, const char[] name, bool dontBroadcast)
+void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
 		survivor_check();
 }
 
-public void survivor_check()
+void survivor_check()
 {
 	//count alive survivors
 	alive_survivors = 0;
@@ -310,58 +309,16 @@ void start_spawn_timer()
 	#endif
 }
 
-public Action auto_spawn_si(Handle timer)
+Action auto_spawn_si(Handle timer)
 {
 	is_spawn_timer_running = false;
-	spawn_si();
-	start_spawn_timer();
-	return Plugin_Continue;
-}
-
-void spawn_si()
-{
-	count_si();
-	if (si_total_count < si_limit) {
-		
-		//set spawn size
-		int size = si_limit - si_total_count;
-		if (size > 2)
-			size = GetRandomInt(2, size);
-
-		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
-		#endif
-
-		float delay = 0.0;
-		while (size) {
-			int index = get_si_index();
-
-			//break on ivalid index, since get_si_index() has retry attempts to provide a valid index
-			if (index < 0)
-				break;
-
-			//prevent instant spam of all specials at once
-			//min and max delays are chosen more for technical reasons than gameplay reasons
-			delay += GetRandomFloat(0.3, 2.2);
-			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
-
-			--size;
-		}
-	}
-
-	#if DEBUG_SI_SPAWN
-	else
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
-	#endif
-}
-
-void count_si()
-{
+	
 	//reset counts
-	si_total_count = 0;
 	for (int i = 0; i < SI_TYPES; ++i)
 		si_type_counts[i] = 0;
 
+	//count special infected
+	int si_total_count = 0;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 
@@ -394,6 +351,42 @@ void count_si()
 			}
 		}
 	}
+
+	if (si_total_count < si_limit) {
+		
+		//set spawn size
+		int size = si_limit - si_total_count;
+		if (size > 2)
+			size = GetRandomInt(2, size);
+
+		#if DEBUG_SI_SPAWN
+		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
+		#endif
+
+		float delay = 0.0;
+		while (size) {
+			int index = get_si_index();
+
+			//break on ivalid index, since get_si_index() has retry attempts to provide a valid index
+			if (index < 0)
+				break;
+
+			//prevent instant spam of all specials at once
+			//min and max delays are chosen more for technical reasons than gameplay reasons
+			delay += GetRandomFloat(0.3, 2.2);
+			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
+
+			--size;
+		}
+	}
+
+	#if DEBUG_SI_SPAWN
+	else
+		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
+	#endif
+
+	start_spawn_timer();
+	return Plugin_Continue;
 }
 
 int get_si_index()
@@ -446,7 +439,7 @@ int get_si_index()
 	return -1;
 }
 
-public Action z_spawn_old(Handle timer, any data)
+Action z_spawn_old(Handle timer, any data)
 {	
 	int client = get_random_alive_survivor();
 	if (client) {
@@ -501,7 +494,7 @@ int get_random_alive_survivor()
 	return 0;
 }
 
-public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
+void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client) {
@@ -525,7 +518,7 @@ public void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	#endif
 }
 
-public void event_round_end(Event event, const char[] name, bool dontBroadcast)
+void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
 	end_spawn_timer();
 }
