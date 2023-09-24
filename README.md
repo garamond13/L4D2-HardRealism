@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+MAJOR (gameplay change).MINOR.PATCH
+
+
 Version 9.0.0
 - Reduce charger health.
 
