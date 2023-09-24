@@ -9,6 +9,9 @@ It doesn't require any config.
 
 ## Changelog
 
+Version 9.0.0
+- Reduce charger health.
+
 Version 8.1.0
 - Small change.
 
@@ -16,7 +19,7 @@ Version 8.0.1
 - Micro optimizations.
 
 Version 8.0.0
-- Reduce charger's health.
+- Reduce charger health.
 
 Version 7.0.0
 - Rework and rebalance values relative to the alive survivors.

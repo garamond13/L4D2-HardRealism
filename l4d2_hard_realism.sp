@@ -3,10 +3,10 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 8:
+Version 9:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
-- Charger health is set to 573.
+- Charger health is set to 570.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
 - Special infected spawn size minimum is 2.
 - Special infected spawn sizes are random.
@@ -31,7 +31,7 @@ Version 8:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "8.1.0"
+#define VERSION "9.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -151,7 +151,7 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
 	//default 600
-	SetConVarInt(FindConVar("z_charger_health"), 573);
+	SetConVarInt(FindConVar("z_charger_health"), 570);
 
 	//disable bots shooting through the survivors
 	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
