@@ -1,9 +1,14 @@
 /*
+Important note
+
+HardRealism mode is designed for mp_gamemode "realism" and z_difficulty "Impossible".
+
+
 Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 9:
+Version 10:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 570.
@@ -14,6 +19,8 @@ Version 9:
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
+- Spawn safety range increased  to 600.
+- Shotguns are more effective against commons.
 - M16 damage increased by 7%.
 - Hunting Rifle damage increased by 12%.
 - Military Sniper damage increased by 12%.
@@ -31,7 +38,7 @@ Version 9:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "9.0.0"
+#define VERSION "10.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -90,10 +97,6 @@ int tank_hp;
 //damage mod
 Handle h_weapon_trie;
 
-//gamemode and difficulty guard
-bool is_gamemode_rejected;
-Handle h_z_difficulty;
-
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
 	author = "Garamond",
@@ -119,30 +122,6 @@ public void OnPluginStart()
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
-
-	//setup difficulty guard
-	h_z_difficulty = FindConVar("z_difficulty");
-	SetConVarString(h_z_difficulty, "Impossible");
-	HookConVarChange(h_z_difficulty, convar_change_z_difficulty);
-	AddCommandListener(on_callvote, "callvote");
-}
-
-public void OnMapStart()
-{
-	char buffer[32];
-	GetConVarString(FindConVar("mp_gamemode"), buffer, sizeof(buffer));
-	if (!strcmp(buffer, "realism"))
-		is_gamemode_rejected = false;
-	else {
-		is_gamemode_rejected = true;
-		CreateTimer(1.0, changelevel, TIMER_FLAG_NO_MAPCHANGE);
-	}
-}
-
-Action changelevel(Handle timer)
-{
-	ServerCommand("sm_cvar mp_gamemode realism; changelevel c1m1_hotel");
-	return Plugin_Continue;
 }
 
 public void OnConfigsExecuted()
@@ -153,16 +132,14 @@ public void OnConfigsExecuted()
 	//default 600
 	SetConVarInt(FindConVar("z_charger_health"), 570);
 
+	//defualt 550
+	SetConVarInt(FindConVar("z_spawn_safety_range"), 600);
+
+	//defualt 100
+	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 200);
+	
 	//disable bots shooting through the survivors
 	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
-
-	//default 5
-	//it will be halved by on_take_damage()
-	SetConVarInt(FindConVar("z_pounce_damage"), 10);
-
-	//default 4
-	//it will be halved by on_take_damage()
-	SetConVarInt(FindConVar("z_jockey_ride_damage"), 8);
 
 	//disbale director spawn special infected
 	SetConVarInt(FindConVar("z_smoker_limit"), 0);
@@ -171,35 +148,14 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_spitter_limit"), 0);
 	SetConVarInt(FindConVar("z_jockey_limit"), 0);
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
-}
 
-Action on_callvote(int client, const char[] command, int argc)
-{
-	char buffer[32];
-	GetCmdArg(1, buffer, sizeof(buffer));
-	
-	//silenly disable ChangeDifficulty vote
-	if (!strcmp(buffer, "ChangeDifficulty"))
-		return Plugin_Handled;
+	//default 5
+	//it will be halved by on_take_damage()
+	SetConVarInt(FindConVar("z_pounce_damage"), 10);
 
-	return Plugin_Continue;
-}
-
-void convar_change_z_difficulty(ConVar convar, const char[] oldValue, const char[] newValue)
-{
-	SetConVarString(h_z_difficulty, "Impossible");
-}
-
-public bool OnClientConnect(int client, char[] rejectmsg, int maxlength)
-{
-	if (is_gamemode_rejected && !IsFakeClient(client)) {
-
-		//a dot at the end of the message will be auto added
-		strcopy(rejectmsg, maxlength, "[HardRealism] Server doesn't support this gamemode. Only realism is supported");
-
-		return false;
-	}
-	return true;
+	//default 4
+	//it will be halved by on_take_damage()
+	SetConVarInt(FindConVar("z_jockey_ride_damage"), 8);
 }
 
 public void OnClientPutInServer(int client)

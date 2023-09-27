@@ -4,13 +4,19 @@ HardRealism is a Left 4 Death 2 mod, a SourceMod plugin.
 
 The goal is to achieve a balance between Realism Expert and Hard Eight (mutation). It's made to be non configurable for consistency and efficiency reasons.
 
-It is designed for Realism Expert, gamemode and difficulty.  
-It doesn't require any config.
+## Important note
+
+HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impossible"` (realism expert).
+
 
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 10.0.0
+- Spawn safety range increased.
+- Shotguns are more effective against commons.
+- Removed gamemode and difficulty guard.
 
 Version 9.0.0
 - Reduce charger health.
