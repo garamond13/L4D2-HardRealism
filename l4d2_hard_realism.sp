@@ -8,7 +8,7 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 10:
+Version 11:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 570.
@@ -19,7 +19,6 @@ Version 10:
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
-- Spawn safety range increased  to 600.
 - Shotguns are more effective against commons.
 - M16 damage increased by 7%.
 - Hunting Rifle damage increased by 12%.
@@ -38,7 +37,7 @@ Version 10:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "10.0.0"
+#define VERSION "11.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -132,11 +131,8 @@ public void OnConfigsExecuted()
 	//default 600
 	SetConVarInt(FindConVar("z_charger_health"), 570);
 
-	//defualt 550
-	SetConVarInt(FindConVar("z_spawn_safety_range"), 600);
-
 	//defualt 100
-	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 200);
+	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
 	
 	//disable bots shooting through the survivors
 	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
