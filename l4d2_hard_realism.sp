@@ -37,7 +37,7 @@ Version 11:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "11.1.1"
+#define VERSION "11.1.2"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -321,6 +321,10 @@ Action auto_spawn_si(Handle timer)
 			#endif
 
 			int index = GetRandomInt(1, tmp_wsum);
+
+			#if DEBUG_SI_SPAWN
+			PrintToConsoleAll("[HR] auto_spawn_si(): index = %i", index);
+			#endif
 
 			//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
 			int range = 0;

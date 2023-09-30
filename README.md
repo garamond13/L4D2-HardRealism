@@ -13,6 +13,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 11.1.2
+- Improve debug.
+
 Version 11.1.1
 - Micro optimizations.
 
