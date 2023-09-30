@@ -37,7 +37,7 @@ Version 11:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "11.1.0"
+#define VERSION "11.1.1"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -80,7 +80,6 @@ static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
 static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
-int si_type_counts[SI_TYPES];
 int alive_survivors;
 int si_limit;
 
@@ -250,8 +249,7 @@ Action auto_spawn_si(Handle timer)
 	is_spawn_timer_running = false;
 	
 	//count special infected
-	for (int i = 0; i < SI_TYPES; ++i)
-		si_type_counts[i] = 0;
+	int si_type_counts[SI_TYPES] = { 0, 0, 0, 0, 0, 0 };
 	int si_total_count = 0;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
@@ -294,16 +292,55 @@ Action auto_spawn_si(Handle timer)
 			size = GetRandomInt(2, size);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
+		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
 		#endif
 
+		int tmp_weights[SI_TYPES];
 		float delay = 0.0;
 		while (size) {
+
+			//calculate temporary weights and their weight sum, including reductions
+			int tmp_wsum = 0;
+			for (int i = 0; i < SI_TYPES; ++i) {
+				if (si_type_counts[i] < si_spawn_limits[i]) {
+					tmp_weights[i] = si_spawn_weights[i];
+					int tmp_count = si_type_counts[i];
+					while (tmp_count) {
+						tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
+						--tmp_count;
+					}
+				}
+				else
+					tmp_weights[i] = 0;
+				tmp_wsum += tmp_weights[i];
+			}
+
+			#if DEBUG_SI_SPAWN
+			for (int i = 0; i < SI_TYPES; ++i)
+				PrintToConsoleAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
+			#endif
+
+			int index = GetRandomInt(1, tmp_wsum);
+
+			//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
+			int range = 0;
+			for (int i = 0; i < SI_TYPES; ++i) {
+				range += tmp_weights[i];
+				if (index <= range) {
+					index = i;
+					++si_type_counts[index];
+					break;
+				}
+			}
+
+			#if DEBUG_SI_SPAWN
+			PrintToConsoleAll("[HR] auto_spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
+			#endif
 
 			//prevent instant spam of all specials at once
 			//min and max delays are chosen more for technical reasons than gameplay reasons
 			delay += GetRandomFloat(0.3, 2.2);
-			CreateTimer(delay, z_spawn_old, get_si_index(), TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
 		}
@@ -311,55 +348,11 @@ Action auto_spawn_si(Handle timer)
 
 	#if DEBUG_SI_SPAWN
 	else
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
+		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
 	#endif
 
 	start_spawn_timer();
 	return Plugin_Continue;
-}
-
-int get_si_index()
-{
-	//calculate temporary weights and their weight sum, including reductions
-	int tmp_weights[SI_TYPES];
-	int tmp_wsum = 0;
-	for (int i = 0; i < SI_TYPES; ++i) {
-		if (si_type_counts[i] < si_spawn_limits[i]) {
-			tmp_weights[i] = si_spawn_weights[i];
-			int tmp_count = si_type_counts[i];
-			while (tmp_count) {
-				tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
-				--tmp_count;
-			}
-		}
-		else
-			tmp_weights[i] = 0;
-		tmp_wsum += tmp_weights[i];
-	}
-
-	#if DEBUG_SI_SPAWN
-	for (int i = 0; i < SI_TYPES; ++i)
-		PrintToConsoleAll("[HR] get_si_index(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
-	#endif
-
-	int index = GetRandomInt(1, tmp_wsum);
-
-	//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
-	int range = 0;
-	for (int i = 0; i < SI_TYPES; ++i) {
-		range += tmp_weights[i];
-		if (index <= range) {
-			index = i;
-			break;
-		}
-	}
-
-	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] get_si_index(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
-	#endif
-
-	++si_type_counts[index];
-	return index;
 }
 
 Action z_spawn_old(Handle timer, any data)
