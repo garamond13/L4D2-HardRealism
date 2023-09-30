@@ -37,7 +37,7 @@ Version 11:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "11.0.0"
+#define VERSION "11.1.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -49,12 +49,12 @@ Version 11:
 #define TEAM_INFECTED 3
 
 //zombie classes
-#define SI_CLASS_SMOKER 1
-#define SI_CLASS_BOOMER 2
-#define SI_CLASS_HUNTER 3
-#define SI_CLASS_SPITTER 4
-#define SI_CLASS_JOCKEY 5
-#define SI_CLASS_CHARGER 6
+#define ZOMBIE_CLASS_SMOKER 1
+#define ZOMBIE_CLASS_BOOMER 2
+#define ZOMBIE_CLASS_HUNTER 3
+#define ZOMBIE_CLASS_SPITTER 4
+#define ZOMBIE_CLASS_JOCKEY 5
+#define ZOMBIE_CLASS_CHARGER 6
 
 //special infected spawner
 //
@@ -249,38 +249,36 @@ Action auto_spawn_si(Handle timer)
 {
 	is_spawn_timer_running = false;
 	
-	//reset counts
+	//count special infected
 	for (int i = 0; i < SI_TYPES; ++i)
 		si_type_counts[i] = 0;
-
-	//count special infected
 	int si_total_count = 0;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 
 			//detect special infected type by zombie class
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
-				case SI_CLASS_SMOKER: {
+				case ZOMBIE_CLASS_SMOKER: {
 					++si_type_counts[SI_INDEX_SMOKER];
 					++si_total_count;
 				}
-				case SI_CLASS_BOOMER: {
+				case ZOMBIE_CLASS_BOOMER: {
 					++si_type_counts[SI_INDEX_BOOMER];
 					++si_total_count;
 				}
-				case SI_CLASS_HUNTER: {
+				case ZOMBIE_CLASS_HUNTER: {
 					++si_type_counts[SI_INDEX_HUNTER];
 					++si_total_count;
 				}
-				case SI_CLASS_SPITTER: {
+				case ZOMBIE_CLASS_SPITTER: {
 					++si_type_counts[SI_INDEX_SPITTER];
 					++si_total_count;
 				}
-				case SI_CLASS_JOCKEY: {
+				case ZOMBIE_CLASS_JOCKEY: {
 					++si_type_counts[SI_INDEX_JOCKEY];
 					++si_total_count;
 				}
-				case SI_CLASS_CHARGER: {
+				case ZOMBIE_CLASS_CHARGER: {
 					++si_type_counts[SI_INDEX_CHARGER];
 					++si_total_count;
 				}
@@ -301,16 +299,11 @@ Action auto_spawn_si(Handle timer)
 
 		float delay = 0.0;
 		while (size) {
-			int index = get_si_index();
-
-			//break on ivalid index, since get_si_index() has retry attempts to provide a valid index
-			if (index < 0)
-				break;
 
 			//prevent instant spam of all specials at once
 			//min and max delays are chosen more for technical reasons than gameplay reasons
 			delay += GetRandomFloat(0.3, 2.2);
-			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(delay, z_spawn_old, get_si_index(), TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
 		}
@@ -331,12 +324,16 @@ int get_si_index()
 	int tmp_weights[SI_TYPES];
 	int tmp_wsum = 0;
 	for (int i = 0; i < SI_TYPES; ++i) {
-		int tmp_count = si_type_counts[i];
-		tmp_weights[i] = si_spawn_weights[i];
-		while (tmp_count) {
-			tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
-			--tmp_count;
+		if (si_type_counts[i] < si_spawn_limits[i]) {
+			tmp_weights[i] = si_spawn_weights[i];
+			int tmp_count = si_type_counts[i];
+			while (tmp_count) {
+				tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
+				--tmp_count;
+			}
 		}
+		else
+			tmp_weights[i] = 0;
 		tmp_wsum += tmp_weights[i];
 	}
 
@@ -345,34 +342,24 @@ int get_si_index()
 		PrintToConsoleAll("[HR] get_si_index(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
 	#endif
 
-	//get random index
-	int retries = 6;
-	while (retries) {
-		int index = GetRandomInt(1, tmp_wsum);
+	int index = GetRandomInt(1, tmp_wsum);
 
-		//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
-		int range = 0;
-		for (int i = 0; i < SI_TYPES; ++i) {
-			range += tmp_weights[i];
-			if (index <= range) {
-				index = i;
-				break;
-			}
+	//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
+	int range = 0;
+	for (int i = 0; i < SI_TYPES; ++i) {
+		range += tmp_weights[i];
+		if (index <= range) {
+			index = i;
+			break;
 		}
-
-		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] get_si_index(): retries = %i; range = %i; tmp_wsum = %i; index = %s", retries, range, tmp_wsum, debug_si_indexes[index]);
-		#endif
-
-		if (si_type_counts[index] < si_spawn_limits[index]) {
-			++si_type_counts[index];
-			return index;
-		}
-		--retries;
 	}
 
-	//indicates an invalid index
-	return -1;
+	#if DEBUG_SI_SPAWN
+	PrintToConsoleAll("[HR] get_si_index(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
+	#endif
+
+	++si_type_counts[index];
+	return index;
 }
 
 Action z_spawn_old(Handle timer, any data)

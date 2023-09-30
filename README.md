@@ -13,6 +13,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 11.1.0
+- Optimizations.
+
 Version 11.0.0
 - Revert spawn safety range change.
 - Reduce shotgun effectiveness against commons.
