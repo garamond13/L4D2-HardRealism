@@ -1,19 +1,19 @@
 /*
 Important note
 
-HardRealism mode is designed for mp_gamemode "realism" and z_difficulty "Impossible".
+HardRealism mode is designed for "mp_gamemode realism" and "z_difficulty Impossible".
 
 
 Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 12:
+Version 13:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 570.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
-- Special infected spawn size minimum is 2.
+- Special infected spawn size minimum is 3.
 - Special infected spawn sizes are random.
 - Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
@@ -37,7 +37,7 @@ Version 12:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "12.0.0"
+#define VERSION "13.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -224,6 +224,8 @@ void survivor_check()
 	
 	//set survior relative values
 	si_limit = alive_survivors + 1;
+	if (si_limit < 3)
+		si_limit = 3;
 	tank_hp = alive_survivors * 6000;
 
 	#if DEBUG_SI_SPAWN
@@ -247,7 +249,13 @@ void start_spawn_timer()
 Action auto_spawn_si(Handle timer)
 {
 	is_spawn_timer_running = false;
-	
+	spawn_si();
+	start_spawn_timer();
+	return Plugin_Continue;
+}
+
+void spawn_si()
+{
 	//count special infected
 	int si_type_counts[SI_TYPES] = { 0, 0, 0, 0, 0, 0 };
 	int si_total_count = 0;
@@ -288,11 +296,11 @@ Action auto_spawn_si(Handle timer)
 		
 		//set spawn size
 		int size = si_limit - si_total_count;
-		if (size > 2)
-			size = GetRandomInt(2, size);
+		if (size > 3)
+			size = GetRandomInt(3, size);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
+		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
 		#endif
 
 		int tmp_weights[SI_TYPES];
@@ -317,13 +325,13 @@ Action auto_spawn_si(Handle timer)
 
 			#if DEBUG_SI_SPAWN
 			for (int i = 0; i < SI_TYPES; ++i)
-				PrintToConsoleAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
+				PrintToConsoleAll("[HR] spawn_si(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
 			#endif
 
 			int index = GetRandomInt(1, tmp_wsum);
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] auto_spawn_si(): index = %i", index);
+			PrintToConsoleAll("[HR] spawn_si(): index = %i", index);
 			#endif
 
 			//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
@@ -338,7 +346,7 @@ Action auto_spawn_si(Handle timer)
 			}
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] auto_spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
+			PrintToConsoleAll("[HR] spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
 			#endif
 
 			//prevent instant spam of all specials at once
@@ -352,11 +360,8 @@ Action auto_spawn_si(Handle timer)
 
 	#if DEBUG_SI_SPAWN
 	else
-		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
+		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
 	#endif
-
-	start_spawn_timer();
-	return Plugin_Continue;
 }
 
 Action z_spawn_old(Handle timer, any data)
