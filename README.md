@@ -13,6 +13,10 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 13.0.0
+- Increase the minimum special infected spawn size.
+- Reorganize code.
+  
 Version 12.0.0
 - Decrease max spawn time.
 
