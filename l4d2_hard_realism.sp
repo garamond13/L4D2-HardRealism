@@ -8,8 +8,8 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 13:
-- Tank health is relative to the number of alive survivors.
+Version 14:
+- Tank health is relative to the number of alive survivors, max 22000.
 - Jockey health is set to 300.
 - Charger health is set to 570.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
@@ -37,7 +37,7 @@ Version 13:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "13.0.0"
+#define VERSION "14.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -227,6 +227,8 @@ void survivor_check()
 	if (si_limit < 3)
 		si_limit = 3;
 	tank_hp = alive_survivors * 6000;
+    if (tank_hp > 22000)
+		tank_hp = 22000;
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
