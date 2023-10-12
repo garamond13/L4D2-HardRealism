@@ -13,6 +13,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 15.0.0
+- Use new formula for tank health.
+
 Version 14.0.0
 - Limit max tank health.
 

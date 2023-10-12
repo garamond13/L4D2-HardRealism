@@ -1,15 +1,12 @@
 /*
-Important note
-
-HardRealism mode is designed for "mp_gamemode realism" and "z_difficulty Impossible".
-
+Important note: HardRealism mode is designed for "mp_gamemode realism" and "z_difficulty Impossible".
 
 Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 14:
-- Tank health is relative to the number of alive survivors, max 22000.
+Version 15:
+- Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
 - Charger health is set to 570.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
@@ -37,7 +34,7 @@ Version 14:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "14.0.0"
+#define VERSION "15.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -226,9 +223,7 @@ void survivor_check()
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
-	tank_hp = alive_survivors * 6000;
-    if (tank_hp > 22000)
-		tank_hp = 22000;
+	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.9));
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
