@@ -13,6 +13,10 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 16.0.0
+- Decrease tank health.
+- Increase max spawn time.
+
 Version 15.0.0
 - Use new formula for tank health.
 
