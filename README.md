@@ -13,6 +13,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 17.0.0
+- Reduced jockey leap range.
+
 Version 16.0.0
 - Decrease tank health.
 - Increase max spawn time.

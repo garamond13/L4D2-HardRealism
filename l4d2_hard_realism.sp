@@ -5,9 +5,10 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 16:
+Version 17:
 - Tank health is relative to the number of alive survivors.
 - Jockey health is set to 300.
+- Jockey leap range is reduced to 150.
 - Charger health is set to 570.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
 - Special infected spawn size minimum is 3.
@@ -34,7 +35,7 @@ Version 16:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "16.0.0"
+#define VERSION "17.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -123,6 +124,9 @@ public void OnConfigsExecuted()
 {
 	//defualt 325
 	SetConVarInt(FindConVar("z_jockey_health"), 300);
+
+	//default 200
+	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);
 
 	//default 600
 	SetConVarInt(FindConVar("z_charger_health"), 570);
