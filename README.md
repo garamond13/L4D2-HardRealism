@@ -8,10 +8,21 @@ The goal is to achieve a balance between Realism Expert and Hard Eight (mutation
 
 HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impossible"` (realism expert).
 
+## Special contributors
+
+[Osvaldatore](https://steamcommunity.com/id/Osvaldatore)
 
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 18.0.0
+- Many changes to special infected health.
+- Many changes to special infected damage.
+- Melee damage to tank is set to 400.
+- Horde max spawn time reduced to 120.
+- Improve debug.
+- Additional small changes.
 
 Version 17.0.0
 - Reduced jockey leap range.

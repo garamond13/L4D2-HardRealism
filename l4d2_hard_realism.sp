@@ -5,11 +5,16 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 17:
+Version 18:
 - Tank health is relative to the number of alive survivors.
+- Smoker health is set to 300.
+- Hunter health is set to 300.
+- Hunter attack damage is set to 20.
+- Spitter health is set to 150.
 - Jockey health is set to 300.
+- Jockey ride damage is set to 15.
 - Jockey leap range is reduced to 150.
-- Charger health is set to 570.
+- Charger pound damage is set to 20.
 - Special infected limit and maximum spawn size are relative to the number of alive survivors.
 - Special infected spawn size minimum is 3.
 - Special infected spawn sizes are random.
@@ -17,13 +22,13 @@ Version 17:
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
+- Horde max spawn time reduced to 120.
 - Shotguns are more effective against commons.
 - M16 damage increased by 7%.
 - Hunting Rifle damage increased by 12%.
 - Military Sniper damage increased by 12%.
 - AWP damage increased by 74%.
-- Hunter Claw damage reduced by 50%.
-- Jockey Claw damage reduced by 50%.
+- Melee damage to tank is set to 400.
 - Disable bots shooting through the survivors.
 */
 
@@ -35,7 +40,7 @@ Version 17:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "17.0.0"
+#define VERSION "18.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -53,6 +58,7 @@ Version 17:
 #define ZOMBIE_CLASS_SPITTER 4
 #define ZOMBIE_CLASS_JOCKEY 5
 #define ZOMBIE_CLASS_CHARGER 6
+#define ZOMBIE_CLASS_TANK 8
 
 //special infected spawner
 //
@@ -110,7 +116,6 @@ public void OnPluginStart()
 	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 1.12);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 1.74);
 	SetTrieValue(h_weapon_trie, "weapon_hunter_claw", 0.5);
-	SetTrieValue(h_weapon_trie, "weapon_jockey_claw", 0.5);
 
 	//hook game events
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
@@ -121,15 +126,36 @@ public void OnPluginStart()
 }
 
 public void OnConfigsExecuted()
-{
+{	
+	//default 250
+	SetConVarInt(FindConVar("z_gas_health"), 300);
+	
+	//default 250
+	SetConVarInt(FindConVar("z_hunter_health"), 300);
+
+	//default 5
+	//it will be multiplied by 3 on Realsim Expert
+	//it will be halved by on_take_damage()
+	SetConVarInt(FindConVar("z_pounce_damage"), 10);
+	
+	//default 100
+	SetConVarInt(FindConVar("z_spitter_health"), 150);
+
 	//defualt 325
 	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
 	//default 200
 	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);
 
-	//default 600
-	SetConVarInt(FindConVar("z_charger_health"), 570);
+	//default 4
+	//it will be multiplied by 3 on Realsim Expert
+	SetConVarInt(FindConVar("z_jockey_ride_damage"), 5);
+
+	//default 15
+	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
+
+	//default 180
+	SetConVarInt(FindConVar("z_mob_spawn_max_interval_expert"), 120);
 
 	//defualt 100
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
@@ -144,14 +170,6 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_spitter_limit"), 0);
 	SetConVarInt(FindConVar("z_jockey_limit"), 0);
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
-
-	//default 5
-	//it will be halved by on_take_damage()
-	SetConVarInt(FindConVar("z_pounce_damage"), 10);
-
-	//default 4
-	//it will be halved by on_take_damage()
-	SetConVarInt(FindConVar("z_jockey_ride_damage"), 8);
 }
 
 public void OnClientPutInServer(int client)
@@ -167,7 +185,10 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	//attack with equipped weapon
+	#if 0
+	PrintToChatAll("attacker %i, inflictor %i dealt [%f] dmg to victim %i", attacker, inflictor, damage, victim);
+	#endif
+
 	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
 		char classname[32];
 		GetClientWeapon(attacker, classname, sizeof(classname));
@@ -178,15 +199,58 @@ Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, 
 			damage *= mod;
 
 			#if DEBUG_DAMAGE_MOD
-			PrintToChatAll("[HR] Damage of %s modded by [%f] to %f", classname, mod, damage);
+			debug_on_take_damage(victim, attacker, inflictor, damage);
+			#endif
+
+			return Plugin_Changed;
+		}
+	}
+	
+	//melee damage to tank
+	else if (victim > 0 && victim <= MaxClients && IsClientInGame(victim) && GetClientTeam(victim) == TEAM_INFECTED && GetEntProp(victim, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_TANK) {
+		char classname[32];
+		GetEdictClassname(inflictor, classname, sizeof(classname));
+		
+		//melee should do one instance of damage larger than zero and multiple instances of zero damage
+		if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
+			damage = 400.0;
+
+			#if DEBUG_DAMAGE_MOD
+			debug_on_take_damage(victim, attacker, inflictor, damage);
 			#endif
 
 			return Plugin_Changed;
 		}
 	}
 
+	#if DEBUG_DAMAGE_MOD
+	debug_on_take_damage(victim, attacker, inflictor, damage);
+	#endif
+
 	return Plugin_Continue;
 }
+
+#if DEBUG_DAMAGE_MOD
+void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
+{
+	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
+		char attacker_name[32];
+		GetClientName(attacker, attacker_name, sizeof(attacker_name));
+		char classname[32];
+		if (attacker == inflictor)
+			GetClientWeapon(inflictor, classname, sizeof(classname));
+		else
+			GetEdictClassname(inflictor, classname, sizeof(classname));
+		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)) {
+			char victim_name[32];
+			GetClientName(victim, victim_name, sizeof(victim_name));
+			PrintToChatAll("%s (%s) %f dmg to %s", attacker_name, classname, damage, victim_name);
+		}
+		else
+			PrintToChatAll("%s (%s) %f dmg to victim %i", attacker_name, classname, damage, victim);
+	}
+}
+#endif
 
 void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
 {
@@ -376,16 +440,18 @@ Action z_spawn_old(Handle timer, any data)
 		if (bot)
 			ChangeClientTeam(bot, TEAM_INFECTED);
 
+		static const char command[] = "z_spawn_old";
+
 		//store command flags
-		int flags = GetCommandFlags("z_spawn_old");
+		int flags = GetCommandFlags(command);
 
 		//clear "sv_cheat" flag from the command
-		SetCommandFlags("z_spawn_old", flags & ~FCVAR_CHEAT);
+		SetCommandFlags(command, flags & ~FCVAR_CHEAT);
 
 		FakeClientCommand(client, "z_spawn_old %s auto", z_spawns[data]);
 
 		//restore command flags
-		SetCommandFlags("z_spawn_old", flags);
+		SetCommandFlags(command, flags);
 
 		#if DEBUG_SI_SPAWN
 		char buffer[32];
