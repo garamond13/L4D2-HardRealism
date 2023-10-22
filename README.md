@@ -16,6 +16,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 18.1.0
+- Improved bots behavior.
+
 Version 18.0.0
 - Many changes to special infected health.
 - Many changes to special infected damage.

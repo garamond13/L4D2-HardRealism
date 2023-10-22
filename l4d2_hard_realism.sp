@@ -22,14 +22,15 @@ Version 18:
 - Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
 - Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
-- Horde max spawn time reduced to 120.
+- Horde max spawn time is reduced to 120.
 - Shotguns are more effective against commons.
-- M16 damage increased by 7%.
-- Hunting Rifle damage increased by 12%.
-- Military Sniper damage increased by 12%.
-- AWP damage increased by 74%.
+- M16 damage is increased by 7%.
+- Hunting Rifle damage is increased by 12%.
+- Military Sniper damage is increased by 12%.
+- AWP damage is increased by 74%.
 - Melee damage to tank is set to 400.
 - Disable bots shooting through the survivors.
+- Improved bots behavior.
 */
 
 #include <sourcemod>
@@ -40,7 +41,7 @@ Version 18:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "18.0.0"
+#define VERSION "18.1.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -141,7 +142,7 @@ public void OnConfigsExecuted()
 	//default 100
 	SetConVarInt(FindConVar("z_spitter_health"), 150);
 
-	//defualt 325
+	//default 325
 	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
 	//default 200
@@ -157,11 +158,20 @@ public void OnConfigsExecuted()
 	//default 180
 	SetConVarInt(FindConVar("z_mob_spawn_max_interval_expert"), 120);
 
-	//defualt 100
+	//default 100
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
 	
-	//disable bots shooting through the survivors
+	//default 1
 	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
+
+	//default 4
+	SetConVarInt(FindConVar("sb_battlestation_human_hold_time"), 1);
+	
+	//default 0.5
+	SetConVarFloat(FindConVar("sb_friend_immobilized_reaction_time_expert"), 0.1);
+
+	//default 0
+	SetConVarInt(FindConVar("sb_sidestep_for_horde"), 1);
 
 	//disbale director spawn special infected
 	SetConVarInt(FindConVar("z_smoker_limit"), 0);
