@@ -5,7 +5,7 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 18:
+Version 19:
 - Tank health is relative to the number of alive survivors.
 - Smoker health is set to 300.
 - Hunter health is set to 300.
@@ -41,7 +41,7 @@ Version 18:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "18.1.0"
+#define VERSION "19.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -301,7 +301,7 @@ void survivor_check()
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
-	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.87));
+	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
