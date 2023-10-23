@@ -16,6 +16,10 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 20.0.0
+- SMG increased damage.
+- SCAR increased damage.
+
 Version 19.0.0
 - Reduce tank health.
 

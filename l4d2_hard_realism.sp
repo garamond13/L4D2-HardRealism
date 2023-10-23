@@ -5,7 +5,7 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 19:
+Version 20:
 - Tank health is relative to the number of alive survivors.
 - Smoker health is set to 300.
 - Hunter health is set to 300.
@@ -24,7 +24,9 @@ Version 19:
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
 - Horde max spawn time is reduced to 120.
 - Shotguns are more effective against commons.
+- SMG damage is increased by 8%.
 - M16 damage is increased by 7%.
+- SCAR damage is increased by 8%. 
 - Hunting Rifle damage is increased by 12%.
 - Military Sniper damage is increased by 12%.
 - AWP damage is increased by 74%.
@@ -41,7 +43,7 @@ Version 19:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "19.0.0"
+#define VERSION "20.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -112,7 +114,9 @@ public void OnPluginStart()
 {
 	//map damage mods
 	h_weapon_trie = CreateTrie();
+	SetTrieValue(h_weapon_trie, "weapon_smg", 1.08);
 	SetTrieValue(h_weapon_trie, "weapon_rifle", 1.07);
+	SetTrieValue(h_weapon_trie, "weapon_rifle_desert", 1.08);
 	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 1.12);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 1.12);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 1.74);
