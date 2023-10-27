@@ -16,6 +16,11 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 21.0.0
+- Revert special infected health changes.
+- Revert weapon damage changes.
+- Rework sniper damage against common and uncommon infected.
+
 Version 20.0.0
 - SMG increased damage.
 - SCAR increased damage.

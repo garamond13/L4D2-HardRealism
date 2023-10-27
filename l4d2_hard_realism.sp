@@ -5,13 +5,9 @@ Version description
 
 Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
 
-Version 20:
+Version 21:
 - Tank health is relative to the number of alive survivors.
-- Smoker health is set to 300.
-- Hunter health is set to 300.
 - Hunter attack damage is set to 20.
-- Spitter health is set to 150.
-- Jockey health is set to 300.
 - Jockey ride damage is set to 15.
 - Jockey leap range is reduced to 150.
 - Charger pound damage is set to 20.
@@ -24,12 +20,10 @@ Version 20:
 - Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
 - Horde max spawn time is reduced to 120.
 - Shotguns are more effective against commons.
-- SMG damage is increased by 8%.
-- M16 damage is increased by 7%.
-- SCAR damage is increased by 8%. 
-- Hunting Rifle damage is increased by 12%.
-- Military Sniper damage is increased by 12%.
-- AWP damage is increased by 74%.
+- Hunting Rifle damage against infected is set to 25.
+- Military Sniper damage against infected is set to 25.
+- Scout damage against infected is set to 50.
+- AWP damage against infected is set to 150.
 - Melee damage to tank is set to 400.
 - Disable bots shooting through the survivors.
 - Improved bots behavior.
@@ -43,7 +37,7 @@ Version 20:
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "20.0.0"
+#define VERSION "21.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -114,13 +108,10 @@ public void OnPluginStart()
 {
 	//map damage mods
 	h_weapon_trie = CreateTrie();
-	SetTrieValue(h_weapon_trie, "weapon_smg", 1.08);
-	SetTrieValue(h_weapon_trie, "weapon_rifle", 1.07);
-	SetTrieValue(h_weapon_trie, "weapon_rifle_desert", 1.08);
-	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 1.12);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 1.12);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 1.74);
-	SetTrieValue(h_weapon_trie, "weapon_hunter_claw", 0.5);
+	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 25.0);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 25.0);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_scout", 50.0);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 150.0);
 
 	//hook game events
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
@@ -132,22 +123,10 @@ public void OnPluginStart()
 
 public void OnConfigsExecuted()
 {	
-	//default 250
-	SetConVarInt(FindConVar("z_gas_health"), 300);
-	
-	//default 250
-	SetConVarInt(FindConVar("z_hunter_health"), 300);
-
 	//default 5
 	//it will be multiplied by 3 on Realsim Expert
 	//it will be halved by on_take_damage()
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
-	
-	//default 100
-	SetConVarInt(FindConVar("z_spitter_health"), 150);
-
-	//default 325
-	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
 	//default 200
 	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);
@@ -188,29 +167,21 @@ public void OnConfigsExecuted()
 
 public void OnClientPutInServer(int client)
 {
-	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage);
+	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_client);
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
-	if (!strcmp(classname, "infected") || !strcmp(classname, "witch"))
-		SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage);
+	if (!strcmp(classname, "infected"))
+		SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage_infected);
 }
 
-Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+Action on_take_damage_client(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	#if 0
-	PrintToChatAll("attacker %i, inflictor %i dealt [%f] dmg to victim %i", attacker, inflictor, damage, victim);
-	#endif
-
-	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
-		char classname[32];
-		GetClientWeapon(attacker, classname, sizeof(classname));
-
-		//get damage modifier
-		float mod;
-		if (GetTrieValue(h_weapon_trie, classname, mod)) {
-			damage *= mod;
+	//hunter damage to survivors
+	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
+		if (IsClientInGame(victim) && GetClientTeam(victim) == TEAM_SURVIVORS) {
+			damage *= 0.5;
 
 			#if DEBUG_DAMAGE_MOD
 			debug_on_take_damage(victim, attacker, inflictor, damage);
@@ -221,18 +192,44 @@ Action on_take_damage(int victim, int& attacker, int& inflictor, float& damage, 
 	}
 	
 	//melee damage to tank
-	else if (victim > 0 && victim <= MaxClients && IsClientInGame(victim) && GetClientTeam(victim) == TEAM_INFECTED && GetEntProp(victim, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_TANK) {
+	else if (IsClientInGame(victim) && GetClientTeam(victim) == TEAM_INFECTED && GetEntProp(victim, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_TANK) {
 		char classname[32];
 		GetEdictClassname(inflictor, classname, sizeof(classname));
 		
 		//melee should do one instance of damage larger than zero and multiple instances of zero damage
 		if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
 			damage = 400.0;
-
+			
 			#if DEBUG_DAMAGE_MOD
 			debug_on_take_damage(victim, attacker, inflictor, damage);
 			#endif
+			
+			return Plugin_Changed;
+		}
+	}
+	
+	#if DEBUG_DAMAGE_MOD
+	debug_on_take_damage(victim, attacker, inflictor, damage);
+	#endif
 
+	return Plugin_Continue;
+}
+
+Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+{
+	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
+		char classname[32];
+		GetClientWeapon(attacker, classname, sizeof(classname));
+
+		//get damage moded damage
+		float mod;
+		if (GetTrieValue(h_weapon_trie, classname, mod)) {
+			damage = mod;
+		
+			#if DEBUG_DAMAGE_MOD
+			debug_on_take_damage(victim, attacker, inflictor, damage);
+			#endif
+		
 			return Plugin_Changed;
 		}
 	}
