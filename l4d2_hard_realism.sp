@@ -298,6 +298,7 @@ void survivor_check()
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
+
 	//tank hp on 1 alive survivor = 6000
 	//tank hp on 2 alive survivors = 10890
 	//tank hp on 3 alive survivors = 15434
