@@ -1,5 +1,5 @@
 /*
-IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism", "z_difficulty Impossible").
+IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 Version description
 
@@ -58,6 +58,9 @@ Version 21
 #define ZOMBIE_CLASS_CHARGER 6
 #define ZOMBIE_CLASS_TANK 8
 
+//special infected spawner
+//
+
 //special infected types (for indexing)
 //keep the same order as zombie classes
 #define SI_TYPES 6
@@ -85,6 +88,8 @@ int si_limit;
 //spawn timer
 Handle h_spawn_timer;
 bool is_spawn_timer_running;
+
+//
 
 //tank health
 int tank_hp;
