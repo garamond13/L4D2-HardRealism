@@ -1,7 +1,9 @@
 /*
-HardRealism mode is designed for Realism Expert ("mp_gamemode realism", "z_difficulty Impossible").
+IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism", "z_difficulty Impossible").
 
-Special Infected order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
+Version description
+
+SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
 Version 21
 - Special Infected limit is relative to the number of alive Survivors.
