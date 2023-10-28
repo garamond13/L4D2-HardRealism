@@ -10,9 +10,9 @@ Version 21
 - Special Infected max spawn size is relative to the number of alive Survivors.
 - Special Infected spawn size minimum is 3.
 - Special Infected spawn sizes are random.
-- Special Infected spawn limits in order are 2, 1, 2, 1, 2, 2.
-- Special Infected spawn weights in order are 60, 100, 60, 100, 60, 60.
-- Special Infected spawn weight reduction factors in order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
+- Special Infected spawn limits in SI order are 2, 1, 2, 1, 2, 2.
+- Special Infected spawn weights in SI order are 60, 100, 60, 100, 60, 60.
+- Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special Infected spawns are randomly delayed in the range [0.3s, 2.2s].
 - Set Hunter claw damage to 20.
 - Set Jockey ride damage to 15.
