@@ -1,32 +1,31 @@
 /*
-Important note: HardRealism mode is designed for "mp_gamemode realism" and "z_difficulty Impossible".
+HardRealism mode is designed for Realism Expert ("mp_gamemode realism", "z_difficulty Impossible").
 
-Version description
+Special Infected order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Note: SI order = smoker, boomer, hunter, spitter, jockey, charger.
-
-Version 21:
-- Tank health is relative to the number of alive survivors.
-- Hunter attack damage is set to 20.
-- Jockey ride damage is set to 15.
-- Jockey leap range is reduced to 150.
-- Charger pound damage is set to 20.
-- Special infected limit and maximum spawn size are relative to the number of alive survivors.
-- Special infected spawn size minimum is 3.
-- Special infected spawn sizes are random.
-- Special infected spawn limits in the SI order are 2, 1, 2, 1, 2, 2.
-- Special infected spawn weights in the SI order are 60, 100, 60, 100, 60, 60.
-- Special infected spawn weight reduction factors in the SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
-- Special infected spawns are randomly delayed in the range [0.3s, 2.2s].
-- Horde max spawn time is reduced to 120.
-- Shotguns are more effective against commons.
-- Hunting Rifle damage against infected is set to 25.
-- Military Sniper damage against infected is set to 25.
-- Scout damage against infected is set to 50.
-- AWP damage against infected is set to 150.
-- Melee damage to tank is set to 400.
-- Disable bots shooting through the survivors.
-- Improved bots behavior.
+Version 21
+- Special Infected limit is relative to the number of alive Survivors.
+- Special Infected max spawn size is relative to the number of alive Survivors.
+- Special Infected spawn size minimum is 3.
+- Special Infected spawn sizes are random.
+- Special Infected spawn limits in order are 2, 1, 2, 1, 2, 2.
+- Special Infected spawn weights in order are 60, 100, 60, 100, 60, 60.
+- Special Infected spawn weight reduction factors in order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
+- Special Infected spawns are randomly delayed in the range [0.3s, 2.2s].
+- Set Hunter claw damage to 20.
+- Set Jockey ride damage to 15.
+- Set Jockey leap range to 150.
+- Set Charger pound damage to 20.
+- Tank health is relative to the number of alive Survivors.
+- Set Horde max spawn time to 120.
+- Shotguns are more effective at close range against Common Infected.
+- Set Hunting Rifle damage against Common/Uncommon Infected to 25.
+- Set Military Sniper damage against Common/Uncommon Infected to 25.
+- Set Scout damage against Common/Uncommon Infected to 50.
+- Set AWP damage against Common/Uncommon Infected to 150.
+- Set melee damage against Tank to 400.
+- Bots no longer shoot through Survivors.
+- Improved bots reactions.
 */
 
 #include <sourcemod>
@@ -57,9 +56,6 @@ Version 21:
 #define ZOMBIE_CLASS_CHARGER 6
 #define ZOMBIE_CLASS_TANK 8
 
-//special infected spawner
-//
-
 //special infected types (for indexing)
 //keep the same order as zombie classes
 #define SI_TYPES 6
@@ -87,8 +83,6 @@ int si_limit;
 //spawn timer
 Handle h_spawn_timer;
 bool is_spawn_timer_running;
-
-//
 
 //tank health
 int tank_hp;
@@ -303,6 +297,10 @@ void survivor_check()
 	if (si_limit < 3)
 		si_limit = 3;
 	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
+	//tank_hp + 1 survivor = 6000
+	//tank_hp + 2 survivors = 10890
+	//tank_hp + 3 survivors = 15434
+	//tank_hp + 4 survivors = 19766
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
