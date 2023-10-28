@@ -298,11 +298,11 @@ void survivor_check()
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
+	//tank hp on 1 alive survivor = 6000
+	//tank hp on 2 alive survivors = 10890
+	//tank hp on 3 alive survivors = 15434
+	//tank hp on 4 alive survivors = 19766
 	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
-	//tank_hp + 1 survivor = 6000
-	//tank_hp + 2 survivors = 10890
-	//tank_hp + 3 survivors = 15434
-	//tank_hp + 4 survivors = 19766
 
 	#if DEBUG_SI_SPAWN
 	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
