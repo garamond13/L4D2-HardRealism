@@ -38,7 +38,7 @@ Version 21
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "21.0.0"
+#define VERSION "21.1.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -107,7 +107,7 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
-	//map damage mods
+	//map modded damage
 	h_weapon_trie = CreateTrie();
 	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 25.0);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 25.0);
@@ -166,54 +166,10 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
 }
 
-public void OnClientPutInServer(int client)
-{
-	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_client);
-}
-
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	if (!strcmp(classname, "infected"))
 		SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage_infected);
-}
-
-Action on_take_damage_client(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
-{
-	//hunter damage to survivors
-	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
-		if (IsClientInGame(victim) && GetClientTeam(victim) == TEAM_SURVIVORS) {
-			damage *= 0.5;
-
-			#if DEBUG_DAMAGE_MOD
-			debug_on_take_damage(victim, attacker, inflictor, damage);
-			#endif
-
-			return Plugin_Changed;
-		}
-	}
-	
-	//melee damage to tank
-	else if (IsClientInGame(victim) && GetClientTeam(victim) == TEAM_INFECTED && GetEntProp(victim, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_TANK) {
-		char classname[32];
-		GetEdictClassname(inflictor, classname, sizeof(classname));
-		
-		//melee should do one instance of damage larger than zero and multiple instances of zero damage
-		if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
-			damage = 400.0;
-			
-			#if DEBUG_DAMAGE_MOD
-			debug_on_take_damage(victim, attacker, inflictor, damage);
-			#endif
-			
-			return Plugin_Changed;
-		}
-	}
-	
-	#if DEBUG_DAMAGE_MOD
-	debug_on_take_damage(victim, attacker, inflictor, damage);
-	#endif
-
-	return Plugin_Continue;
 }
 
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
@@ -222,10 +178,8 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 		char classname[32];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
-		//get damage moded damage
-		float mod;
-		if (GetTrieValue(h_weapon_trie, classname, mod)) {
-			damage = mod;
+		//get modded damage
+		if (GetTrieValue(h_weapon_trie, classname, damage)) {
 		
 			#if DEBUG_DAMAGE_MOD
 			debug_on_take_damage(victim, attacker, inflictor, damage);
@@ -241,28 +195,6 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 
 	return Plugin_Continue;
 }
-
-#if DEBUG_DAMAGE_MOD
-void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
-{
-	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
-		char attacker_name[32];
-		GetClientName(attacker, attacker_name, sizeof(attacker_name));
-		char classname[32];
-		if (attacker == inflictor)
-			GetClientWeapon(inflictor, classname, sizeof(classname));
-		else
-			GetEdictClassname(inflictor, classname, sizeof(classname));
-		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)) {
-			char victim_name[32];
-			GetClientName(victim, victim_name, sizeof(victim_name));
-			PrintToChatAll("%s (%s) %f dmg to %s", attacker_name, classname, damage, victim_name);
-		}
-		else
-			PrintToChatAll("%s (%s) %f dmg to victim %i", attacker_name, classname, damage, victim);
-	}
-}
-#endif
 
 void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
 {
@@ -278,10 +210,35 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
 
+		//first make sure we are not rehooking on_take_damage_survivor
+		SDKUnhook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
+
+		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
+
 		//count on the next frame, fixes miscount on idle
 		RequestFrame(survivor_check);
 
 	}
+}
+
+Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+{
+	//hunter damage to survivors
+	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
+		damage *= 0.5;
+
+		#if DEBUG_DAMAGE_MOD
+		debug_on_take_damage(victim, attacker, inflictor, damage);
+		#endif
+
+		return Plugin_Changed;
+	}
+	
+	#if DEBUG_DAMAGE_MOD
+	debug_on_take_damage(victim, attacker, inflictor, damage);
+	#endif
+
+	return Plugin_Continue;
 }
 
 void event_player_death(Event event, const char[] name, bool dontBroadcast)
@@ -513,6 +470,8 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 		//the constant factor was calculated from default values
 		SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
+		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
+
 		#if DEBUG_TANK_HP
 		PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
 		PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
@@ -525,6 +484,34 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	else
 		PrintToConsoleAll("[HR] event_tank_spawn(): CLIENT WAS ZERO!");
 	#endif
+}
+
+Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+{
+	//melee damage to tank
+	//
+
+	char classname[16];
+	GetEdictClassname(inflictor, classname, sizeof(classname));
+	
+	//melee should do one instance of damage larger than zero and multiple instances of zero damage
+	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
+		damage = 400.0;
+		
+		#if DEBUG_DAMAGE_MOD
+		debug_on_take_damage(victim, attacker, inflictor, damage);
+		#endif
+		
+		return Plugin_Changed;
+	}
+
+	//
+	
+	#if DEBUG_DAMAGE_MOD
+	debug_on_take_damage(victim, attacker, inflictor, damage);
+	#endif
+
+	return Plugin_Continue;
 }
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
@@ -544,3 +531,25 @@ void end_spawn_timer()
 		is_spawn_timer_running = false;
 	}
 }
+
+#if DEBUG_DAMAGE_MOD
+void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
+{
+	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
+		char attacker_name[32];
+		GetClientName(attacker, attacker_name, sizeof(attacker_name));
+		char classname[32];
+		if (attacker == inflictor)
+			GetClientWeapon(inflictor, classname, sizeof(classname));
+		else
+			GetEdictClassname(inflictor, classname, sizeof(classname));
+		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)) {
+			char victim_name[32];
+			GetClientName(victim, victim_name, sizeof(victim_name));
+			PrintToChatAll("%s (%s) %f dmg to %s", attacker_name, classname, damage, victim_name);
+		}
+		else
+			PrintToChatAll("%s (%s) %f dmg to victim %i", attacker_name, classname, damage, victim);
+	}
+}
+#endif

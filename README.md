@@ -4,9 +4,7 @@ HardRealism is a Left 4 Death 2 mod, a SourceMod plugin.
 
 The goal is to achieve a balance between Realism Expert and Hard Eight (mutation). It's made to be non configurable for consistency and efficiency reasons.
 
-## Important note
-
-HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impossible"` (realism expert).
+IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 ## Special contributors
 
@@ -15,6 +13,9 @@ HardRealism mode is designed for `mp_gamemode "realism"` and `z_difficulty "Impo
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 21.1.0
+- Optimize on take damage.
 
 Version 21.0.0
 - Revert special infected health changes.
