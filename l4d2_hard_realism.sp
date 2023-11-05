@@ -13,7 +13,7 @@ Version 21
 - Special Infected spawn limits in SI order are 2, 1, 2, 1, 2, 2.
 - Special Infected spawn weights in SI order are 60, 100, 60, 100, 60, 60.
 - Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
-- Special Infected spawns are randomly delayed in the range [0.3s, 2.2s].
+- Special Infected spawns are randomly delayed in the range [0.4s, 2.2s].
 - Set Hunter claw damage to 20.
 - Set Jockey ride damage to 15.
 - Set Jockey leap range to 150.
@@ -38,7 +38,7 @@ Version 21
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "21.1.0"
+#define VERSION "21.2.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -390,7 +390,7 @@ void spawn_si()
 
 			//prevent instant spam of all specials at once
 			//min and max delays are chosen more for technical reasons than gameplay reasons
-			delay += GetRandomFloat(0.3, 2.2);
+			delay += GetRandomFloat(0.4, 2.2);
 			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
