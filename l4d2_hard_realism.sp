@@ -38,7 +38,7 @@ Version 21
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "21.2.0"
+#define VERSION "21.3.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -77,10 +77,12 @@ static const char debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_
 #endif
 
 //keep the same order as zombie classes
-static const char z_spawns[SI_TYPES][] = { "smoker", "boomer", "hunter", "spitter", "jockey", "charger" };
+static const char z_spawns[SI_TYPES][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
 static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
 static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
 static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
+
+static const char z_spawn_old[] = "z_spawn_old";
 
 int alive_survivors;
 int si_limit;
@@ -391,7 +393,7 @@ void spawn_si()
 			//prevent instant spam of all specials at once
 			//min and max delays are chosen more for technical reasons than gameplay reasons
 			delay += GetRandomFloat(0.4, 2.2);
-			CreateTimer(delay, z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(delay, fake_z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
 		}
@@ -403,34 +405,32 @@ void spawn_si()
 	#endif
 }
 
-Action z_spawn_old(Handle timer, any data)
+Action fake_z_spawn_old(Handle timer, any data)
 {	
 	int client = get_random_alive_survivor();
 	if (client) {
 		
 		//create infected bot
 		//without this we may not be able to spawn our special infected
-		int bot = CreateFakeClient("Infected Bot");
+		int bot = CreateFakeClient("");
 		if (bot)
 			ChangeClientTeam(bot, TEAM_INFECTED);
 
-		static const char command[] = "z_spawn_old";
-
 		//store command flags
-		int flags = GetCommandFlags(command);
+		int flags = GetCommandFlags(z_spawn_old);
 
 		//clear "sv_cheat" flag from the command
-		SetCommandFlags(command, flags & ~FCVAR_CHEAT);
+		SetCommandFlags(z_spawn_old, flags & ~FCVAR_CHEAT);
 
-		FakeClientCommand(client, "z_spawn_old %s auto", z_spawns[data]);
+		FakeClientCommand(client, z_spawns[data]);
 
 		//restore command flags
-		SetCommandFlags(command, flags);
+		SetCommandFlags(z_spawn_old, flags);
 
 		#if DEBUG_SI_SPAWN
 		char buffer[32];
 		GetClientName(client, buffer, sizeof(buffer));
-		PrintToConsoleAll("[HR] z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, debug_si_indexes[data], z_spawns[data]);
+		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, debug_si_indexes[data], z_spawns[data]);
 		#endif
 
 		//kick the bot
@@ -441,7 +441,7 @@ Action z_spawn_old(Handle timer, any data)
 
 	#if DEBUG_SI_SPAWN
 	else
-		PrintToConsoleAll("[HR] z_spawn_old(): INVALID CLIENT!");
+		PrintToConsoleAll("[HR] fake_z_spawn_old(): INVALID CLIENT!");
 	#endif
 
 	return Plugin_Continue;
@@ -482,7 +482,7 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 
 	#if DEBUG_TANK_HP
 	else
-		PrintToConsoleAll("[HR] event_tank_spawn(): CLIENT WAS ZERO!");
+		PrintToConsoleAll("[HR] event_tank_spawn(): INVALID CLIENT!");
 	#endif
 }
 
