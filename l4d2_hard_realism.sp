@@ -5,7 +5,7 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 21
+Version 22
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
 - Special Infected spawn size minimum is 3.
@@ -19,7 +19,6 @@ Version 21
 - Set Jockey leap range to 150.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors.
-- Set Horde max spawn time to 120.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 25.
 - Set Military Sniper damage against Common/Uncommon Infected to 25.
@@ -38,7 +37,7 @@ Version 21
 #pragma newdecls required
 
 //MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "21.3.0"
+#define VERSION "22.0.0"
 
 //debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -140,9 +139,6 @@ public void OnConfigsExecuted()
 
 	//default 15
 	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
-
-	//default 180
-	SetConVarInt(FindConVar("z_mob_spawn_max_interval_expert"), 120);
 
 	//default 100
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);

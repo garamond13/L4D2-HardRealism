@@ -14,6 +14,9 @@ IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode re
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 22.0.0
+- Revert horde max spawn time reduction.
+
 Version 21.3.0
 - Optimize special infected spawning.
 
