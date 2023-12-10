@@ -5,9 +5,10 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 22
+Version 23
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
+- Special Infected max spawn size is reduced by the number of tanks in play.
 - Special Infected spawn size minimum is 3.
 - Special Infected spawn sizes are random.
 - Special Infected spawn limits in SI order are 2, 1, 2, 1, 2, 2.
@@ -36,19 +37,19 @@ Version 22
 #pragma semicolon 1
 #pragma newdecls required
 
-//MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "22.0.0"
+// MAJOR (gameplay change).MINOR.PATCH
+#define VERSION "23.0.0"
 
-//debug switches
+// Debug switches
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
 #define DEBUG_TANK_HP 0
 
-//teams
+// Teams
 #define TEAM_SURVIVORS 2
 #define TEAM_INFECTED 3
 
-//zombie classes
+// Zombie classes
 #define ZOMBIE_CLASS_SMOKER 1
 #define ZOMBIE_CLASS_BOOMER 2
 #define ZOMBIE_CLASS_HUNTER 3
@@ -57,11 +58,11 @@ Version 22
 #define ZOMBIE_CLASS_CHARGER 6
 #define ZOMBIE_CLASS_TANK 8
 
-//special infected spawner
+// Special infected spawner
 //
 
-//special infected types (for indexing)
-//keep the same order as zombie classes
+// Special infected types (for indexing).
+// Keep the same order as zombie classes.
 #define SI_TYPES 6
 #define SI_INDEX_SMOKER 0
 #define SI_INDEX_BOOMER 1
@@ -71,11 +72,11 @@ Version 22
 #define SI_INDEX_CHARGER 5
 
 #if DEBUG_SI_SPAWN
-//keep the same order as zombie classes
+// Keep the same order as zombie classes.
 static const char debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_BOOMER", "SI_INDEX_HUNTER", "SI_INDEX_SPITTER", "SI_INDEX_JOCKEY", "SI_INDEX_CHARGER" };
 #endif
 
-//keep the same order as zombie classes
+// Keep the same order as zombie classes.
 static const char z_spawns[SI_TYPES][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
 static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
 static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
@@ -86,17 +87,20 @@ static const char z_spawn_old[] = "z_spawn_old";
 int alive_survivors;
 int si_limit;
 
-//spawn timer
+// Spawn timer
 Handle h_spawn_timer;
 bool is_spawn_timer_running;
 
 //
 
-//tank health
+// Tank health
 int tank_hp;
 
-//damage mod
+// Damage mod
 Handle h_weapon_trie;
+
+// Used by GetVScriptOutput().
+ConVar gCvarBuffer;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -108,54 +112,57 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
-	//map modded damage
+	// Map modded damage.
 	h_weapon_trie = CreateTrie();
 	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 25.0);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 25.0);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_scout", 50.0);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 150.0);
 
-	//hook game events
+	// Hook game events.
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", event_player_spawn);
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
+	
+	// Used by GetVScriptOutput().
+	gCvarBuffer = CreateConVar("sm_vscript_return", "", "Buffer used to return vscript values. Do not use.");
 }
 
 public void OnConfigsExecuted()
 {	
-	//default 5
-	//it will be multiplied by 3 on Realsim Expert
-	//it will be halved by on_take_damage()
+	// Workaround! It will be halved by on_take_damage().
+	// Default 5.
+	// It will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
 
-	//default 200
+	// Default 200.
 	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);
 
-	//default 4
-	//it will be multiplied by 3 on Realsim Expert
+	// Default 4.
+	// It will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_jockey_ride_damage"), 5);
 
-	//default 15
+	// Default 15.
 	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
 
-	//default 100
+	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
 	
-	//default 1
+	// Default 1.
 	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
 
-	//default 4
+	// Default 4.
 	SetConVarInt(FindConVar("sb_battlestation_human_hold_time"), 1);
 	
-	//default 0.5
+	// Default 0.5.
 	SetConVarFloat(FindConVar("sb_friend_immobilized_reaction_time_expert"), 0.1);
 
-	//default 0
+	// Default 0.
 	SetConVarInt(FindConVar("sb_sidestep_for_horde"), 1);
 
-	//disbale director spawn special infected
+	// Disbale director spawn special infected.
 	SetConVarInt(FindConVar("z_smoker_limit"), 0);
 	SetConVarInt(FindConVar("z_boomer_limit"), 0);
 	SetConVarInt(FindConVar("z_hunter_limit"), 0);
@@ -176,7 +183,7 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 		char classname[32];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
-		//get modded damage
+		// Get modded damage.
 		if (GetTrieValue(h_weapon_trie, classname, damage)) {
 		
 			#if DEBUG_DAMAGE_MOD
@@ -208,12 +215,12 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
 
-		//first make sure we are not rehooking on_take_damage_survivor
+		// First make sure we are not rehooking on_take_damage_survivor.
 		SDKUnhook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
 
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
 
-		//count on the next frame, fixes miscount on idle
+		// Count on the next frame, fixes miscount on idle.
 		RequestFrame(survivor_check);
 
 	}
@@ -221,7 +228,7 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 
 Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	//hunter damage to survivors
+	// Hunter damage to survivors.
 	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
 		damage *= 0.5;
 
@@ -248,21 +255,21 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 
 void survivor_check()
 {
-	//count alive survivors
+	// Count alive survivors.
 	alive_survivors = 0;
 	for (int i = 1; i <= MaxClients; ++i)
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
 			++alive_survivors;
 	
-	//set survior relative values
+	// Set survior relative values.
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
 
-	//tank hp on 1 alive survivor = 6000
-	//tank hp on 2 alive survivors = 10890
-	//tank hp on 3 alive survivors = 15434
-	//tank hp on 4 alive survivors = 19766
+	// Tank hp on 1 alive survivor = 6000.
+	// Tank hp on 2 alive survivors = 10890.
+	// Tank hp on 3 alive survivors = 15434.
+	// Tank hp on 4 alive survivors = 19766.
 	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
 
 	#if DEBUG_SI_SPAWN
@@ -293,13 +300,13 @@ Action auto_spawn_si(Handle timer)
 
 void spawn_si()
 {
-	//count special infected
+	// Count special infected.
 	int si_type_counts[SI_TYPES] = { 0, 0, 0, 0, 0, 0 };
 	int si_total_count = 0;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 
-			//detect special infected type by zombie class
+			// Detect special infected type by zombie class.
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
 				case ZOMBIE_CLASS_SMOKER: {
 					++si_type_counts[SI_INDEX_SMOKER];
@@ -325,13 +332,28 @@ void spawn_si()
 					++si_type_counts[SI_INDEX_CHARGER];
 					++si_total_count;
 				}
+
+				// Idealy should count only aggroed tanks.
+				case ZOMBIE_CLASS_TANK: {
+					char buffer[256]; // GetVScriptOutput() requires large buffer.
+					
+					// Returns true if any tanks are aggro on survivors.
+					GetVScriptOutput("Director.IsTankInPlay()", buffer, sizeof(buffer));
+					
+					#if DEBUG_SI_SPAWN
+					PrintToConsoleAll("[HR] spawn_si(): Director.IsTankInPlay() = %s", buffer);
+					#endif
+
+					if (!strcmp(buffer, "true"))
+						++si_total_count;
+				}
 			}
 		}
 	}
 
 	if (si_total_count < si_limit) {
 		
-		//set spawn size
+		// Set spawn size.
 		int size = si_limit - si_total_count;
 		if (size > 3)
 			size = GetRandomInt(3, size);
@@ -344,7 +366,7 @@ void spawn_si()
 		float delay = 0.0;
 		while (size) {
 
-			//calculate temporary weights and their weight sum, including reductions
+			// Calculate temporary weights and their weight sum, including reductions.
 			int tmp_wsum = 0;
 			for (int i = 0; i < SI_TYPES; ++i) {
 				if (si_type_counts[i] < si_spawn_limits[i]) {
@@ -371,7 +393,7 @@ void spawn_si()
 			PrintToConsoleAll("[HR] spawn_si(): index = %i", index);
 			#endif
 
-			//cycle trough weight ranges, find where the random index falls and pick an appropriate array index
+			// Cycle trough weight ranges, find where the random index falls and pick an appropriate array index.
 			int range = 0;
 			for (int i = 0; i < SI_TYPES; ++i) {
 				range += tmp_weights[i];
@@ -386,8 +408,8 @@ void spawn_si()
 			PrintToConsoleAll("[HR] spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
 			#endif
 
-			//prevent instant spam of all specials at once
-			//min and max delays are chosen more for technical reasons than gameplay reasons
+			// Prevent instant spam of all specials at once.
+			// Min and max delays are chosen more for technical reasons than gameplay reasons.
 			delay += GetRandomFloat(0.4, 2.2);
 			CreateTimer(delay, fake_z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
@@ -406,21 +428,21 @@ Action fake_z_spawn_old(Handle timer, any data)
 	int client = get_random_alive_survivor();
 	if (client) {
 		
-		//create infected bot
-		//without this we may not be able to spawn our special infected
+		// Create infected bot.
+		// Without this we may not be able to spawn our special infected.
 		int bot = CreateFakeClient("");
 		if (bot)
 			ChangeClientTeam(bot, TEAM_INFECTED);
 
-		//store command flags
+		// Store command flags.
 		int flags = GetCommandFlags(z_spawn_old);
 
-		//clear "sv_cheat" flag from the command
+		// Clear "sv_cheat" flag from the command.
 		SetCommandFlags(z_spawn_old, flags & ~FCVAR_CHEAT);
 
 		FakeClientCommand(client, z_spawns[data]);
 
-		//restore command flags
+		// Restore command flags.
 		SetCommandFlags(z_spawn_old, flags);
 
 		#if DEBUG_SI_SPAWN
@@ -429,7 +451,7 @@ Action fake_z_spawn_old(Handle timer, any data)
 		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, debug_si_indexes[data], z_spawns[data]);
 		#endif
 
-		//kick the bot
+		// Kick the bot.
 		if (bot && IsClientConnected(bot))
 			KickClient(bot);
 
@@ -463,7 +485,11 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-		//the constant factor was calculated from default values
+		// Tank burn time on 1 alive survivor = 64 s (1:04 min).
+		// Tank burn time on 2 alive survivors = 116 s (1:56 min).
+		// Tank burn time on 3 alive survivors = 164 s (2:44 min).
+		// Tank burn time on 4 alive survivors = 210 s (3:30 min).
+		// The constant factor was calculated from default values.
 		SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
@@ -484,13 +510,14 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 
 Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	//melee damage to tank
+	// Melee damage to tank.
 	//
 
 	char classname[16];
 	GetEdictClassname(inflictor, classname, sizeof(classname));
 	
-	//melee should do one instance of damage larger than zero and multiple instances of zero damage
+	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
+	// so ignore zero damage.
 	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
 		damage = 400.0;
 		
@@ -549,3 +576,41 @@ void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 	}
 }
 #endif
+
+// Source https://forums.alliedmods.net/showthread.php?t=317145
+// If <RETURN> </RETURN> is removed as suggested.
+/**
+* Runs a single line of VScript code and returns values from it.
+*
+* @param	code			The code to run.
+* @param	buffer			Buffer to copy to.
+* @param	maxlength		Maximum size of the buffer.
+* @return	True on success, false otherwise.
+* @error	Invalid code.
+*/
+stock bool GetVScriptOutput(char[] code, char[] buffer, int maxlength)
+{
+	static int logic = INVALID_ENT_REFERENCE;
+	if( logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic) )
+	{
+		logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+		if( logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic) )
+			SetFailState("Could not create 'logic_script'");
+
+		DispatchSpawn(logic);
+	}
+	Format(buffer, maxlength, "Convars.SetValue(\"sm_vscript_return\", \"\" + %s + \"\");", code);
+
+	// Run code
+	SetVariantString(buffer);
+	AcceptEntityInput(logic, "RunScriptCode");
+	AcceptEntityInput(logic, "Kill");
+
+	// Retrieve value and return to buffer
+	gCvarBuffer.GetString(buffer, maxlength);
+	gCvarBuffer.SetString("");
+
+	if( buffer[0] == '\x0')
+		return false;
+	return true;
+}

@@ -14,6 +14,9 @@ IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode re
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 23.0.0
+- If tank is aggroed on survivors, tanks will be added to total SI count.
+
 Version 22.0.0
 - Revert horde max spawn time reduction.
 
