@@ -8,8 +8,7 @@ IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode re
 
 ## Compilation
 
-To compile it into .smx SourceMod plugin you can use the SourceMod Plugin Compiler:
-https://www.sourcemod.net/compiler.php
+To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compiler](https://www.sourcemod.net/compiler.php).
 
 ## Special contributors
 
