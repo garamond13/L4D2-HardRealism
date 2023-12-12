@@ -6,6 +6,11 @@ The goal is to achieve a balance between Realism Expert and Hard Eight (mutation
 
 IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
+## Compilation
+
+To compile it into .smx SourceMod plugin you can use the SourceMod Plugin Compiler:
+https://www.sourcemod.net/compiler.php
+
 ## Special contributors
 
 [Osvaldatore](https://steamcommunity.com/id/Osvaldatore)
