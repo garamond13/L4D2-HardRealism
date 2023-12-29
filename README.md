@@ -18,6 +18,9 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 23.0.1
+- Micro optimizations.
+
 Version 23.0.0
 - If tank is aggroed on survivors, tanks will be added to total SI count.
 

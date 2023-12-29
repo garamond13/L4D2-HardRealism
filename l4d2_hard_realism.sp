@@ -38,7 +38,7 @@ Version 23
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "23.0.0"
+#define VERSION "23.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -92,9 +92,6 @@ Handle h_spawn_timer;
 bool is_spawn_timer_running;
 
 //
-
-// Tank health
-int tank_hp;
 
 // Damage mod
 Handle h_weapon_trie;
@@ -221,7 +218,7 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
 
 		// Count on the next frame, fixes miscount on idle.
-		RequestFrame(survivor_check);
+		RequestFrame(count_alive_survivors);
 
 	}
 }
@@ -250,32 +247,24 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
-		survivor_check();
+		count_alive_survivors();
 }
 
-void survivor_check()
+void count_alive_survivors()
 {
-	// Count alive survivors.
 	alive_survivors = 0;
 	for (int i = 1; i <= MaxClients; ++i)
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
 			++alive_survivors;
 	
-	// Set survior relative values.
+	// Setting si_limit here is convinient.
 	si_limit = alive_survivors + 1;
 	if (si_limit < 3)
 		si_limit = 3;
 
-	// Tank hp on 1 alive survivor = 6000.
-	// Tank hp on 2 alive survivors = 10890.
-	// Tank hp on 3 alive survivors = 15434.
-	// Tank hp on 4 alive survivors = 19766.
-	tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
-
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] survivor_check(): alive_survivors = %i", alive_survivors);
-	PrintToConsoleAll("[HR] survivor_check(): si_limit = %i", si_limit);
-	PrintToConsoleAll("[HR] survivor_check(): tank_hp = %i", tank_hp);
+	PrintToConsoleAll("[HR] count_alive_survivors(): alive_survivors = %i", alive_survivors);
+	PrintToConsoleAll("[HR] count_alive_survivors(): si_limit = %i", si_limit);
 	#endif
 }
 
@@ -335,9 +324,9 @@ void spawn_si()
 
 				// Idealy should count only aggroed tanks.
 				case ZOMBIE_CLASS_TANK: {
-					char buffer[256]; // GetVScriptOutput() requires large buffer.
+					char buffer[128]; // GetVScriptOutput() requires large buffer.
 					
-					// Returns true if any tanks are aggro on survivors.
+					// Returns "true" if any tanks are aggro on survivors.
 					GetVScriptOutput("Director.IsTankInPlay()", buffer, sizeof(buffer));
 					
 					#if DEBUG_SI_SPAWN
@@ -482,6 +471,13 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client) {
+
+		// Tank hp on 1 alive survivor = 6000.
+		// Tank hp on 2 alive survivors = 10890.
+		// Tank hp on 3 alive survivors = 15434.
+		// Tank hp on 4 alive survivors = 19766.
+		int tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
+		
 		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
