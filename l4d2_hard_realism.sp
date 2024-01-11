@@ -5,7 +5,8 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 23
+Version 24
+- Number of alive survivors is clamped between 2 and 4.
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
 - Special Infected max spawn size is reduced by the number of tanks in play.
@@ -30,6 +31,10 @@ Version 23
 - Improved bots reactions.
 */
 
+/*
+Note that in SourcePawn variables and arrays should be zero initialized by default.
+*/
+
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
@@ -38,7 +43,7 @@ Version 23
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "23.0.1"
+#define VERSION "24.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -256,14 +261,18 @@ void count_alive_survivors()
 	for (int i = 1; i <= MaxClients; ++i)
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
 			++alive_survivors;
+
+	#if DEBUG_SI_SPAWN
+	PrintToConsoleAll("[HR] count_alive_survivors(): (BEFORE CLAMP!) alive_survivors = %i", alive_survivors);
+	#endif
+
+	alive_survivors = clamp(alive_survivors, 2, 4);
 	
 	// Setting si_limit here is convinient.
 	si_limit = alive_survivors + 1;
-	if (si_limit < 3)
-		si_limit = 3;
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] count_alive_survivors(): alive_survivors = %i", alive_survivors);
+	PrintToConsoleAll("[HR] count_alive_survivors(): (AFTER CLAMP!) alive_survivors = %i", alive_survivors);
 	PrintToConsoleAll("[HR] count_alive_survivors(): si_limit = %i", si_limit);
 	#endif
 }
@@ -290,8 +299,8 @@ Action auto_spawn_si(Handle timer)
 void spawn_si()
 {
 	// Count special infected.
-	int si_type_counts[SI_TYPES] = { 0, 0, 0, 0, 0, 0 };
-	int si_total_count = 0;
+	int si_type_counts[SI_TYPES];
+	int si_total_count;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 
@@ -352,11 +361,11 @@ void spawn_si()
 		#endif
 
 		int tmp_weights[SI_TYPES];
-		float delay = 0.0;
+		float delay;
 		while (size) {
 
 			// Calculate temporary weights and their weight sum, including reductions.
-			int tmp_wsum = 0;
+			int tmp_wsum;
 			for (int i = 0; i < SI_TYPES; ++i) {
 				if (si_type_counts[i] < si_spawn_limits[i]) {
 					tmp_weights[i] = si_spawn_weights[i];
@@ -383,7 +392,7 @@ void spawn_si()
 			#endif
 
 			// Cycle trough weight ranges, find where the random index falls and pick an appropriate array index.
-			int range = 0;
+			int range;
 			for (int i = 0; i < SI_TYPES; ++i) {
 				range += tmp_weights[i];
 				if (index <= range) {
@@ -454,25 +463,11 @@ Action fake_z_spawn_old(Handle timer, any data)
 	return Plugin_Continue;
 }
 
-int get_random_alive_survivor()
-{
-	if (alive_survivors) {
-		int[] clients = new int[alive_survivors];
-		int index = 0;
-		for (int i = 1; i <= MaxClients; ++i)
-			if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
-				clients[index++] = i;
-		return clients[GetRandomInt(0, alive_survivors - 1)];
-	}
-	return 0;
-}
-
 void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client) {
 
-		// Tank hp on 1 alive survivor = 6000.
 		// Tank hp on 2 alive survivors = 10890.
 		// Tank hp on 3 alive survivors = 15434.
 		// Tank hp on 4 alive survivors = 19766.
@@ -481,7 +476,6 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-		// Tank burn time on 1 alive survivor = 64 s (1:04 min).
 		// Tank burn time on 2 alive survivors = 116 s (1:56 min).
 		// Tank burn time on 3 alive survivors = 164 s (2:44 min).
 		// Tank burn time on 4 alive survivors = 210 s (3:30 min).
@@ -491,6 +485,7 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
 
 		#if DEBUG_TANK_HP
+		PrintToConsoleAll("[HR] event_tank_spawn(): alive_survivors = %i", alive_survivors);
 		PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
 		PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
 		PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
@@ -573,6 +568,9 @@ void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 }
 #endif
 
+// Extra stock functions
+//
+
 // Source https://forums.alliedmods.net/showthread.php?t=317145
 // If <RETURN> </RETURN> is removed as suggested.
 /**
@@ -609,4 +607,25 @@ stock bool GetVScriptOutput(char[] code, char[] buffer, int maxlength)
 	if( buffer[0] == '\x0')
 		return false;
 	return true;
+}
+
+/*
+Returns client of random alive survivor or 0 if there are no alive survivors.
+*/
+stock int get_random_alive_survivor()
+{
+	int[] clients = new int[MaxClients];
+	int index;
+	for (int i = 1; i <= MaxClients; ++i)
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+			clients[index++] = i; // We can't know who's last, so index will overflow!
+	return index ? clients[GetRandomInt(0, index - 1)] : 0;
+}
+
+/*
+Returns clamped val between min and max.
+*/
+stock int clamp(int val, int min, int max)
+{
+	return (val < min ? min : val) > max ? max : val;
 }
