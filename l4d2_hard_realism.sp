@@ -43,7 +43,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "24.0.0"
+#define VERSION "24.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -627,5 +627,5 @@ Returns clamped val between min and max.
 */
 stock int clamp(int val, int min, int max)
 {
-	return (val < min ? min : val) > max ? max : val;
+	return val > max ? max : (val < min ? min : val);
 }

@@ -18,6 +18,9 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 24.0.1
+- Optimize clamp function.
+
 Version 24.0.0
 - Clamp alive survivors between 2 and 4.
 
