@@ -5,7 +5,7 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 24
+Version 25
 - Number of alive survivors is clamped between 2 and 4.
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
@@ -43,7 +43,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "24.0.1"
+#define VERSION "25.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -468,17 +468,17 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client) {
 
-		// Tank hp on 2 alive survivors = 10890.
-		// Tank hp on 3 alive survivors = 15434.
-		// Tank hp on 4 alive survivors = 19766.
-		int tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.86));
+		// Tank hp on 2 alive survivors = 10447.
+		// Tank hp on 3 alive survivors = 14449.
+		// Tank hp on 4 alive survivors = 18189.
+		int tank_hp = RoundToNearest(6000.0 * Pow(float(alive_survivors), 0.8));
 		
 		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-		// Tank burn time on 2 alive survivors = 116 s (1:56 min).
-		// Tank burn time on 3 alive survivors = 164 s (2:44 min).
-		// Tank burn time on 4 alive survivors = 210 s (3:30 min).
+		// Tank burn time on 2 alive survivors = 111 s (1:51 min).
+		// Tank burn time on 3 alive survivors = 154 s (2:34 min).
+		// Tank burn time on 4 alive survivors = 193 s (3:13 min).
 		// The constant factor was calculated from default values.
 		SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
@@ -509,7 +509,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
-	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
+	if (!strcmp(classname, "weapon_melee") && isnzero(damage)) {
 		damage = 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
@@ -628,4 +628,12 @@ Returns clamped val between min and max.
 stock int clamp(int val, int min, int max)
 {
 	return val > max ? max : (val < min ? min : val);
+}
+
+/*
+Safe check is float val not zero.
+*/
+stock bool isnzero(float val)
+{
+	return FloatAbs(val) >= 0.000001;
 }

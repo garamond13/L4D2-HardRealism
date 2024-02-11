@@ -18,6 +18,10 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 25.0.0
+- Rescale tank health.
+- Turn float check is not zero into stock function.
+
 Version 24.0.1
 - Optimize clamp function.
 
