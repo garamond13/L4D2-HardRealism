@@ -5,7 +5,7 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 25
+Version 26
 - Number of alive survivors is clamped between 2 and 4.
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
@@ -17,6 +17,7 @@ Version 25
 - Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special Infected spawns are randomly delayed in the range [0.4s, 2.2s].
 - Set Hunter claw damage to 20.
+- Set Jockey health to 300.
 - Set Jockey ride damage to 15.
 - Set Jockey leap range to 150.
 - Set Charger pound damage to 20.
@@ -43,7 +44,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "25.0.0"
+#define VERSION "26.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -138,6 +139,9 @@ public void OnConfigsExecuted()
 	// Default 5.
 	// It will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
+
+	// Defualt 325.
+	SetConVarInt(FindConVar("z_jockey_health"), 300);
 
 	// Default 200.
 	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);

@@ -14,9 +14,16 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 [Osvaldatore](https://steamcommunity.com/id/Osvaldatore)
 
+## Known issues
+
+- If alive bot gets kicked alive survivors will not get recounted. To resolve this you can trigger recount by going IDLE.
+
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 26.0.0
+- Reduce jockey health.
 
 Version 25.0.0
 - Rescale tank health.
