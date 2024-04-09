@@ -5,7 +5,7 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 26
+Version 27
 - Number of alive survivors is clamped between 2 and 4.
 - Special Infected limit is relative to the number of alive Survivors.
 - Special Infected max spawn size is relative to the number of alive Survivors.
@@ -23,9 +23,9 @@ Version 26
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors.
 - Shotguns are more effective at close range against Common Infected.
-- Set Hunting Rifle damage against Common/Uncommon Infected to 25.
-- Set Military Sniper damage against Common/Uncommon Infected to 25.
-- Set Scout damage against Common/Uncommon Infected to 50.
+- Set Hunting Rifle damage against Common/Uncommon Infected to 38.
+- Set Military Sniper damage against Common/Uncommon Infected to 38.
+- Set Scout damage against Common/Uncommon Infected to 75.
 - Set AWP damage against Common/Uncommon Infected to 150.
 - Set melee damage against Tank to 400.
 - Bots no longer shoot through Survivors.
@@ -44,7 +44,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "26.0.0"
+#define VERSION "27.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -117,9 +117,9 @@ public void OnPluginStart()
 {
 	// Map modded damage.
 	h_weapon_trie = CreateTrie();
-	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 25.0);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 25.0);
-	SetTrieValue(h_weapon_trie, "weapon_sniper_scout", 50.0);
+	SetTrieValue(h_weapon_trie, "weapon_hunting_rifle", 38.0);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_military", 38.0);
+	SetTrieValue(h_weapon_trie, "weapon_sniper_scout", 75.0);
 	SetTrieValue(h_weapon_trie, "weapon_sniper_awp", 150.0);
 
 	// Hook game events.

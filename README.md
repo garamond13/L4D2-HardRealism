@@ -22,6 +22,9 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 27.0.0
+- Buff snipers against uncommon infected.
+
 Version 26.0.0
 - Reduce jockey health.
 
