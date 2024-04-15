@@ -5,13 +5,16 @@ Version description
 
 SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 27
-- Number of alive survivors is clamped between 2 and 4.
-- Special Infected limit is relative to the number of alive Survivors.
-- Special Infected max spawn size is relative to the number of alive Survivors.
+Version 28
+- Normal (default) mod and MaxedOut mod.
+- Get active mode with hr_getmod command.
+- Switch between mods with hr_switchmod command.
+- Number of alive survivors is clamped between 2 and 4 (Normal mod).
+- Special Infected limit is relative to the number of alive Survivors (Normal mod).
+- Special Infected max spawn size is relative to the number of alive Survivors (Normal mod).
 - Special Infected max spawn size is reduced by the number of tanks in play.
-- Special Infected spawn size minimum is 3.
-- Special Infected spawn sizes are random.
+- Special Infected spawn size minimum is 3 (Normal mod).
+- Special Infected spawn sizes are random (Normal mod).
 - Special Infected spawn limits in SI order are 2, 1, 2, 1, 2, 2.
 - Special Infected spawn weights in SI order are 60, 100, 60, 100, 60, 60.
 - Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
@@ -21,7 +24,7 @@ Version 27
 - Set Jockey ride damage to 15.
 - Set Jockey leap range to 150.
 - Set Charger pound damage to 20.
-- Tank health is relative to the number of alive Survivors.
+- Tank health is relative to the number of alive Survivors (Normal mod).
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
 - Set Military Sniper damage against Common/Uncommon Infected to 38.
@@ -44,7 +47,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "27.0.0"
+#define VERSION "28.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -90,6 +93,9 @@ static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0
 
 static const char z_spawn_old[] = "z_spawn_old";
 
+// Is MaxedOut mod active? If not Normal mod will be active.
+bool is_maxedout;
+
 int alive_survivors;
 int si_limit;
 
@@ -128,6 +134,9 @@ public void OnPluginStart()
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
+
+	RegConsoleCmd("hr_getmod", command_hr_getmod);
+	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
 	// Used by GetVScriptOutput().
 	gCvarBuffer = CreateConVar("sm_vscript_return", "", "Buffer used to return vscript values. Do not use.");
@@ -226,10 +235,13 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
 
-		// Count on the next frame, fixes miscount on idle.
-		RequestFrame(count_alive_survivors);
-
-	}
+		if (!is_maxedout) {
+			
+			// Count on the next frame, fixes miscount on idle.
+			RequestFrame(count_alive_survivors);
+		
+		}
+	}	
 }
 
 Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
@@ -283,7 +295,9 @@ void count_alive_survivors()
 
 void start_spawn_timer()
 {
-	float timer = GetRandomFloat(17.0, 38.0);
+	float timer = 17.0;
+	if (!is_maxedout)
+		timer = GetRandomFloat(17.0, 38.0);
 	h_spawn_timer = CreateTimer(timer, auto_spawn_si);
 	is_spawn_timer_running = true;
 
@@ -357,7 +371,7 @@ void spawn_si()
 		
 		// Set spawn size.
 		int size = si_limit - si_total_count;
-		if (size > 3)
+		if (!is_maxedout && size > 3)
 			size = GetRandomInt(3, size);
 
 		#if DEBUG_SI_SPAWN
@@ -513,7 +527,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
-	if (!strcmp(classname, "weapon_melee") && isnzero(damage)) {
+	if (!strcmp(classname, "weapon_melee") && isn_zero(damage)) {
 		damage = 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
@@ -535,6 +549,32 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
 	end_spawn_timer();
+}
+
+public Action command_hr_getmod(int client, int args)
+{
+	if (is_maxedout)
+		PrintToConsole(client, "[HR] MaxedOut mod is active.");
+	else // Normal mod
+		PrintToConsole(client, "[HR] Normal mod is active.");
+	return Plugin_Handled;
+}
+
+public Action command_hr_switchmod(int client, int args)
+{
+	is_maxedout = !is_maxedout;
+	if (is_maxedout) {
+		UnhookEvent("player_death", event_player_death);
+		alive_survivors = 4;
+		si_limit = 5;
+		PrintToChat(client, "[HR] MaxedOut mod is activated.");
+	}
+	else { // Normal mod
+		HookEvent("player_death", event_player_death);
+		count_alive_survivors();
+		PrintToChat(client, "[HR] Normal mod is activated.");
+	}
+	return Plugin_Handled;
 }
 
 public void OnMapEnd()
@@ -637,7 +677,7 @@ stock int clamp(int val, int min, int max)
 /*
 Safe check is float val not zero.
 */
-stock bool isnzero(float val)
+stock bool isn_zero(float val)
 {
 	return FloatAbs(val) >= 0.000001;
 }
