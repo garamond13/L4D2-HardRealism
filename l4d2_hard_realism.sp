@@ -47,7 +47,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "28.0.0"
+#define VERSION "28.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -135,6 +135,7 @@ public void OnPluginStart()
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
 	HookEvent("round_end", event_round_end, EventHookMode_Pre);
 
+	// Register new console commands.
 	RegConsoleCmd("hr_getmod", command_hr_getmod);
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
@@ -186,6 +187,32 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
 }
 
+Action command_hr_getmod(int client, int args)
+{
+	if (is_maxedout)
+		PrintToConsole(client, "[HR] MaxedOut mod is active.");
+	else // Normal mod.
+		PrintToConsole(client, "[HR] Normal mod is active.");
+	return Plugin_Handled;
+}
+
+Action command_hr_switchmod(int client, int args)
+{
+	is_maxedout = !is_maxedout;
+	if (is_maxedout) {
+		UnhookEvent("player_death", event_player_death);
+		alive_survivors = 4;
+		si_limit = 5;
+		PrintToChatAll("[HR] MaxedOut mod is activated.");
+	}
+	else { // Normal mod.
+		HookEvent("player_death", event_player_death);
+		count_alive_survivors();
+		PrintToChatAll("[HR] Normal mod is activated.");
+	}
+	return Plugin_Handled;
+}
+
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	if (!strcmp(classname, "infected"))
@@ -214,15 +241,6 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 	#endif
 
 	return Plugin_Continue;
-}
-
-void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
-{
-	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] event_player_left_safe_area()");
-	#endif
-
-	start_spawn_timer();
 }
 
 void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
@@ -291,6 +309,15 @@ void count_alive_survivors()
 	PrintToConsoleAll("[HR] count_alive_survivors(): (AFTER CLAMP!) alive_survivors = %i", alive_survivors);
 	PrintToConsoleAll("[HR] count_alive_survivors(): si_limit = %i", si_limit);
 	#endif
+}
+
+void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
+{
+	#if DEBUG_SI_SPAWN
+	PrintToConsoleAll("[HR] event_player_left_safe_area()");
+	#endif
+
+	start_spawn_timer();
 }
 
 void start_spawn_timer()
@@ -549,32 +576,6 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
 	end_spawn_timer();
-}
-
-public Action command_hr_getmod(int client, int args)
-{
-	if (is_maxedout)
-		PrintToConsole(client, "[HR] MaxedOut mod is active.");
-	else // Normal mod
-		PrintToConsole(client, "[HR] Normal mod is active.");
-	return Plugin_Handled;
-}
-
-public Action command_hr_switchmod(int client, int args)
-{
-	is_maxedout = !is_maxedout;
-	if (is_maxedout) {
-		UnhookEvent("player_death", event_player_death);
-		alive_survivors = 4;
-		si_limit = 5;
-		PrintToChat(client, "[HR] MaxedOut mod is activated.");
-	}
-	else { // Normal mod
-		HookEvent("player_death", event_player_death);
-		count_alive_survivors();
-		PrintToChat(client, "[HR] Normal mod is activated.");
-	}
-	return Plugin_Handled;
 }
 
 public void OnMapEnd()

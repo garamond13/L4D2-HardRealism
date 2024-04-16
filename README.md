@@ -22,6 +22,10 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 28.0.1
+- Fix message on mod switch not showing to all clients.
+- Reorganize code.
+
 Version 28.0.0
 - Add MaxedOut mod.
 - Add hr_getmod command.
