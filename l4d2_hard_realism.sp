@@ -47,7 +47,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "28.0.1"
+#define VERSION "28.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -199,16 +199,18 @@ Action command_hr_getmod(int client, int args)
 Action command_hr_switchmod(int client, int args)
 {
 	is_maxedout = !is_maxedout;
+	char buffer[32];
+	GetClientName(client, buffer, sizeof(buffer));
 	if (is_maxedout) {
 		UnhookEvent("player_death", event_player_death);
 		alive_survivors = 4;
 		si_limit = 5;
-		PrintToChatAll("[HR] MaxedOut mod is activated.");
+		PrintToChatAll("[HR] MaxedOut mod is activated by %s.", buffer);
 	}
 	else { // Normal mod.
 		HookEvent("player_death", event_player_death);
 		count_alive_survivors();
-		PrintToChatAll("[HR] Normal mod is activated.");
+		PrintToChatAll("[HR] Normal mod is activated by %s.", buffer);
 	}
 	return Plugin_Handled;
 }
