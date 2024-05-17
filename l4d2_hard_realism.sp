@@ -47,7 +47,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "28.1.0"
+#define VERSION "28.2.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -590,6 +590,14 @@ void end_spawn_timer()
 	if (is_spawn_timer_running) {
 		CloseHandle(h_spawn_timer);
 		is_spawn_timer_running = false;
+	}
+}
+
+public void OnServerEnterHibernation()
+{
+	if (is_maxedout) {
+		HookEvent("player_death", event_player_death);
+		is_maxedout = false;
 	}
 }
 
