@@ -47,7 +47,7 @@ Note that in SourcePawn variables and arrays should be zero initialized by defau
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "28.2.0"
+#define VERSION "28.2.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -338,13 +338,7 @@ void start_spawn_timer()
 Action auto_spawn_si(Handle timer)
 {
 	is_spawn_timer_running = false;
-	spawn_si();
-	start_spawn_timer();
-	return Plugin_Continue;
-}
 
-void spawn_si()
-{
 	// Count special infected.
 	int si_type_counts[SI_TYPES];
 	int si_total_count;
@@ -386,7 +380,7 @@ void spawn_si()
 					GetVScriptOutput("Director.IsTankInPlay()", buffer, sizeof(buffer));
 					
 					#if DEBUG_SI_SPAWN
-					PrintToConsoleAll("[HR] spawn_si(): Director.IsTankInPlay() = %s", buffer);
+					PrintToConsoleAll("[HR] auto_spawn_si(): Director.IsTankInPlay() = %s", buffer);
 					#endif
 
 					if (!strcmp(buffer, "true"))
@@ -396,6 +390,7 @@ void spawn_si()
 		}
 	}
 
+	// Spawn special infected.
 	if (si_total_count < si_limit) {
 		
 		// Set spawn size.
@@ -404,7 +399,7 @@ void spawn_si()
 			size = GetRandomInt(3, size);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
+		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; size = %i", si_limit, si_total_count, size);
 		#endif
 
 		int tmp_weights[SI_TYPES];
@@ -429,13 +424,13 @@ void spawn_si()
 
 			#if DEBUG_SI_SPAWN
 			for (int i = 0; i < SI_TYPES; ++i)
-				PrintToConsoleAll("[HR] spawn_si(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
+				PrintToConsoleAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", debug_si_indexes[i], tmp_weights[i]);
 			#endif
 
 			int index = GetRandomInt(1, tmp_wsum);
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] spawn_si(): index = %i", index);
+			PrintToConsoleAll("[HR] auto_spawn_si(): index = %i", index);
 			#endif
 
 			// Cycle trough weight ranges, find where the random index falls and pick an appropriate array index.
@@ -450,7 +445,7 @@ void spawn_si()
 			}
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
+			PrintToConsoleAll("[HR] auto_spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, debug_si_indexes[index]);
 			#endif
 
 			// Prevent instant spam of all specials at once.
@@ -464,8 +459,13 @@ void spawn_si()
 
 	#if DEBUG_SI_SPAWN
 	else
-		PrintToConsoleAll("[HR] spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
+		PrintToConsoleAll("[HR] auto_spawn_si(): si_limit = %i; si_total_count = %i; SI LIMIT REACHED!", si_limit, si_total_count);
 	#endif
+
+	// Restart the spawn timer.
+	start_spawn_timer();
+	
+	return Plugin_Continue;
 }
 
 Action fake_z_spawn_old(Handle timer, any data)

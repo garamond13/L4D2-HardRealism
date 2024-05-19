@@ -22,6 +22,9 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 28.2.1
+- Micro optimization.
+
 Version 28.2.0
 - Auto switch mod to Normal on server hibernation (Requires min SourceMod v1.12.0.7132).
 
