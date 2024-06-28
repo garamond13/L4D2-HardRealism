@@ -8,7 +8,10 @@ IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode re
 
 ## Compilation
 
-To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compiler](https://www.sourcemod.net/compiler.php).
+Depends on (required) [Actions](https://forums.alliedmods.net/showthread.php?p=2771520#post2771520).  
+Idealy compile with SourceMod version 1.12.  
+
+If you don't know how to compile it into SourceMod plugin (.smx) see https://wiki.alliedmods.net/Compiling_SourceMod_Plugins
 
 ## Special contributors
 
@@ -21,6 +24,14 @@ To compile it into .smx SourceMod plugin you can use the [SourceMod Plugin Compi
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 29.0.0
+- Fix common infected shove direction.
+- Fix special infected insta attack after shove.
+- Fix friendly damage on charger carry.
+- Fix smoker insta grab.
+- Revert some bot improvements.
+- Various minor changes.
 
 Version 28.2.1
 - Micro optimization.
