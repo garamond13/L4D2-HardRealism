@@ -49,7 +49,7 @@ Version 29
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "29.0.0"
+#define VERSION "29.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -598,7 +598,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	// Prevent insta attack from SI after shove.
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
-	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_INFECTED) {
+	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
 		int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
 		if (zombie_class == ZOMBIE_CLASS_SMOKER || zombie_class == ZOMBIE_CLASS_BOOMER || zombie_class == ZOMBIE_CLASS_HUNTER || zombie_class == ZOMBIE_CLASS_SPITTER || zombie_class == ZOMBIE_CLASS_JOCKEY) {
 			
@@ -688,9 +688,9 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 	int smoker = GetClientOfUserId(GetEventInt(event, "userid"));
 	int victim_id = GetEventInt(event, "victim");
 	int victim = GetClientOfUserId(victim_id);
-	if (smoker && IsClientInGame(smoker) && victim && IsClientInGame(victim)) {
+	if (victim) {
 		int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
-		if (ground_entity != -1) {
+		if (ground_entity != -1 && smoker && IsClientInGame(smoker) && IsClientInGame(victim)) {
 
 			// Get origins.
 			float smoker_origin[3];

@@ -25,6 +25,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 29.0.1
+- Minor change.
+
 Version 29.0.0
 - Fix common infected shove direction.
 - Fix special infected insta attack after shove.
