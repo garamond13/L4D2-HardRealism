@@ -25,7 +25,7 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
-Version 29.0.1
+Version 29.0.2
 - Rework friendly damage on charger carry fix.
 
 Version 29.0.1
