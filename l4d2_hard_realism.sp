@@ -49,7 +49,7 @@ Version 29
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "29.0.1"
+#define VERSION "29.0.2"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -632,54 +632,42 @@ Action clear_in_attack2(Handle timer, int data)
 
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
 {
-	int client = GetClientOfUserId(GetEventInt(event, "victim"));
-	if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
-
 		#if DEBUG_CHARGER
 		char buffer[32];
-		GetClientName(client, buffer, sizeof(buffer));
+		GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
 		PrintToChatAll("[HR] event_charger_carry_start(): victim = %s", buffer);
 		#endif
 
-		// Disable taking damage (god mod on).
-		SetEntProp(client, Prop_Data, "m_takedamage", 0);
-
-	}
+		SDKHook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
 }
 
 void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
 {
-	int victim = GetEventInt(event, "victim");
-	int client = GetClientOfUserId(victim);
-	if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
-
 		#if DEBUG_CHARGER
 		char buffer[32];
-		GetClientName(client, buffer, sizeof(buffer));
+		GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
 		PrintToChatAll("[HR] event_charger_carry_end(): victim = %s", buffer);
 		#endif
 
-		// Reenable taking damage (god mod off).
-		SetEntProp(client, Prop_Data, "m_takedamage", 2);
-
-		// We have to manualy apply damage at the end.
-		// Also we don't want to apply it if the charger dies, so we have to do it on the next frame.
-		DataPack data = CreateDataPack();
-		WritePackCell(data, GetEventInt(event, "userid"));
-		WritePackCell(data, victim);
-		RequestFrame(take_damage_on_charger_carry_end, data);
-
-	}
+		SDKUnhook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
 }
 
-void take_damage_on_charger_carry_end(DataPack data)
+Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	ResetPack(data);
-	int charger = GetClientOfUserId(ReadPackCell(data));
-	int victim = GetClientOfUserId(ReadPackCell(data));
-	CloseHandle(data);
-	if (charger && IsClientInGame(charger) && IsPlayerAlive(charger) && victim && IsClientInGame(victim) && IsPlayerAlive(victim))
-		SDKHooks_TakeDamage(victim, 0, 0, 20.0);
+	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_SURVIVORS) {
+
+		#if DEBUG_CHARGER
+		char attacker_name[32];
+		char victim_name[32];
+		GetClientName(attacker, attacker_name, sizeof(attacker_name));
+		GetClientName(victim, victim_name, sizeof(victim_name));
+		PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %s, victim = %s", attacker_name, victim_name);
+		#endif
+
+		damage = 0.0;
+		return Plugin_Changed;
+	}
+	return Plugin_Continue;
 }
 
 void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
