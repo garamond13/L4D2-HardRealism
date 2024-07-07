@@ -25,6 +25,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 29.1.0
+- Reduce spawn delays.
+- Make timer callbacks void.
+
 Version 29.0.2
 - Rework friendly damage on charger carry fix.
 

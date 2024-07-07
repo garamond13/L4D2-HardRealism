@@ -49,7 +49,7 @@ Version 29
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "29.0.2"
+#define VERSION "29.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -327,7 +327,7 @@ void start_spawn_timer()
 	#endif
 }
 
-Action auto_spawn_si(Handle timer)
+void auto_spawn_si(Handle timer)
 {
 	// Count special infected.
 	int si_type_counts[SI_TYPES];
@@ -440,7 +440,7 @@ Action auto_spawn_si(Handle timer)
 
 			// Prevent instant spam of all specials at once.
 			// Min and max delays are chosen more for technical reasons than gameplay reasons.
-			delay += GetRandomFloat(0.4, 2.2);
+			delay += GetRandomFloat(0.2, 1.2);
 			CreateTimer(delay, fake_z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
@@ -454,11 +454,9 @@ Action auto_spawn_si(Handle timer)
 
 	// Restart the spawn timer.
 	start_spawn_timer();
-	
-	return Plugin_Continue;
 }
 
-Action fake_z_spawn_old(Handle timer, int data)
+void fake_z_spawn_old(Handle timer, int data)
 {	
 	int client = get_random_alive_survivor();
 	if (client) {
@@ -499,7 +497,6 @@ Action fake_z_spawn_old(Handle timer, int data)
 		PrintToConsoleAll("[HR] fake_z_spawn_old(): INVALID CLIENT!");
 	#endif
 
-	return Plugin_Continue;
 }
 
 void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
@@ -615,7 +612,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-Action clear_in_attack2(Handle timer, int data)
+void clear_in_attack2(Handle timer, int data)
 {
 	int client = GetClientOfUserId(data);
 	if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
@@ -627,7 +624,6 @@ Action clear_in_attack2(Handle timer, int data)
 		
 		SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") & ~IN_ATTACK2);
 	}
-	return Plugin_Continue;
 }
 
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
