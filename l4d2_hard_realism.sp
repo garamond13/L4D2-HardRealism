@@ -49,7 +49,7 @@ Version 29
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "29.1.0"
+#define VERSION "29.2.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -89,12 +89,6 @@ Version 29
 // Keep the same order as zombie classes.
 static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_BOOMER", "SI_INDEX_HUNTER", "SI_INDEX_SPITTER", "SI_INDEX_JOCKEY", "SI_INDEX_CHARGER" };
 #endif
-
-// Keep the same order as zombie classes.
-static const char g_z_spawns[SI_TYPES][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
-static const int g_si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
-static const int g_si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
-static const float g_si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
 Handle g_hspawn_timer;
 int g_alive_survivors;
@@ -392,6 +386,11 @@ void auto_spawn_si(Handle timer)
 		PrintToConsoleAll("[HR] auto_spawn_si(): g_si_limit = %i; si_total_count = %i; size = %i", g_si_limit, si_total_count, size);
 		#endif
 
+		// Keep the same order as zombie classes.
+		static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
+		static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
+		static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
+
 		int tmp_weights[SI_TYPES];
 		float delay;
 		while (size) {
@@ -399,11 +398,11 @@ void auto_spawn_si(Handle timer)
 			// Calculate temporary weights and their weight sum, including reductions.
 			int tmp_wsum;
 			for (int i = 0; i < SI_TYPES; ++i) {
-				if (si_type_counts[i] < g_si_spawn_limits[i]) {
-					tmp_weights[i] = g_si_spawn_weights[i];
+				if (si_type_counts[i] < si_spawn_limits[i]) {
+					tmp_weights[i] = si_spawn_weights[i];
 					int tmp_count = si_type_counts[i];
 					while (tmp_count) {
-						tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * g_si_spawn_weight_mods[i]);
+						tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
 						--tmp_count;
 					}
 				}
@@ -440,7 +439,7 @@ void auto_spawn_si(Handle timer)
 
 			// Prevent instant spam of all specials at once.
 			// Min and max delays are chosen more for technical reasons than gameplay reasons.
-			delay += GetRandomFloat(0.2, 1.2);
+			delay += GetRandomFloat(0.4, 1.2);
 			CreateTimer(delay, fake_z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
@@ -475,7 +474,10 @@ void fake_z_spawn_old(Handle timer, int data)
 		// Clear "sv_cheat" flag from the command.
 		SetCommandFlags(z_spawn_old, flags & ~FCVAR_CHEAT);
 
-		FakeClientCommand(client, g_z_spawns[data]);
+		// Keep the same order as zombie classes.
+		static const char z_spawns[SI_TYPES][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
+
+		FakeClientCommand(client, z_spawns[data]);
 
 		// Restore command flags.
 		SetCommandFlags(z_spawn_old, flags);
@@ -483,7 +485,7 @@ void fake_z_spawn_old(Handle timer, int data)
 		#if DEBUG_SI_SPAWN
 		char buffer[32];
 		GetClientName(client, buffer, sizeof(buffer));
-		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%s]; g_z_spawns[%s] = %s", client, buffer, g_debug_si_indexes[data], g_z_spawns[data]);
+		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, g_debug_si_indexes[data], z_spawns[data]);
 		#endif
 
 		// Kick the bot.
