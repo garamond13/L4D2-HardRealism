@@ -3,9 +3,9 @@ IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode re
 
 Version description
 
-SI order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
+Special Infected (SI) order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 29
+Version 30
 - Normal (default) mod and MaxedOut mod.
 - Get active mode with hr_getmod command.
 - Switch between mods with hr_switchmod command.
@@ -49,7 +49,7 @@ Version 29
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "29.2.0"
+#define VERSION "30.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -93,6 +93,7 @@ static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDE
 Handle g_hspawn_timer;
 int g_alive_survivors;
 int g_si_limit;
+int g_si_recently_killed[SI_TYPES];
 
 //
 
@@ -189,13 +190,11 @@ Action command_hr_switchmod(int client, int args)
 	char buffer[32];
 	GetClientName(client, buffer, sizeof(buffer));
 	if (g_is_maxedout) {
-		UnhookEvent("player_death", event_player_death);
 		g_alive_survivors = 4;
 		g_si_limit = 5;
 		PrintToChatAll("[HR] MaxedOut mod is activated by %s.", buffer);
 	}
 	else { // Normal mod.
-		HookEvent("player_death", event_player_death);
 		count_alive_survivors();
 		PrintToChatAll("[HR] Normal mod is activated by %s.", buffer);
 	}
@@ -274,8 +273,47 @@ Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float&
 void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS)
-		count_alive_survivors();
+	if (client && IsClientInGame(client)) {
+		if (!g_is_maxedout && GetClientTeam(client) == TEAM_SURVIVORS)
+			count_alive_survivors();
+
+		// Keep track of recently killed special infected.
+		else if (GetClientTeam(client) == TEAM_INFECTED) {
+			const float delay = 4.0;
+			switch (GetEntProp(client, Prop_Send, "m_zombieClass")) {
+				case ZOMBIE_CLASS_SMOKER: {
+					++g_si_recently_killed[SI_INDEX_SMOKER];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_SMOKER, TIMER_FLAG_NO_MAPCHANGE);
+				}
+				case ZOMBIE_CLASS_BOOMER: {
+					++g_si_recently_killed[SI_INDEX_BOOMER];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_BOOMER, TIMER_FLAG_NO_MAPCHANGE);
+				}
+				case ZOMBIE_CLASS_HUNTER: {
+					++g_si_recently_killed[SI_INDEX_HUNTER];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_HUNTER, TIMER_FLAG_NO_MAPCHANGE);
+				}
+				case ZOMBIE_CLASS_SPITTER: {
+					++g_si_recently_killed[SI_INDEX_SPITTER];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_SPITTER, TIMER_FLAG_NO_MAPCHANGE);
+				}
+				case ZOMBIE_CLASS_JOCKEY: {
+					++g_si_recently_killed[SI_INDEX_JOCKEY];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_JOCKEY, TIMER_FLAG_NO_MAPCHANGE);
+				}
+				case ZOMBIE_CLASS_CHARGER: {
+					++g_si_recently_killed[SI_INDEX_CHARGER];
+					CreateTimer(delay, clear_recently_killed, SI_INDEX_CHARGER, TIMER_FLAG_NO_MAPCHANGE);
+				}
+			}
+		}
+
+	}
+}
+
+void clear_recently_killed(Handle tiemr, int data)
+{
+	--g_si_recently_killed[data];
 }
 
 void count_alive_survivors()
@@ -328,8 +366,6 @@ void auto_spawn_si(Handle timer)
 	int si_total_count;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
-
-			// Detect special infected type by zombie class.
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
 				case ZOMBIE_CLASS_SMOKER: {
 					++si_type_counts[SI_INDEX_SMOKER];
@@ -457,6 +493,17 @@ void auto_spawn_si(Handle timer)
 
 void fake_z_spawn_old(Handle timer, int data)
 {	
+	// Further delay spawn if special infected we wished to spawn was killed recently.
+	if (g_si_recently_killed[data] > 0) {
+
+		#if DEBUG_SI_SPAWN
+		PrintToConsoleAll("[HR] fake_z_spawn_old(): g_si_recently_killed[%s] = %i; RECREATING TIMER AND RETURNING!", g_debug_si_indexes[data], g_si_recently_killed[data]);
+		#endif
+
+		CreateTimer(0.1, fake_z_spawn_old, data, TIMER_FLAG_NO_MAPCHANGE);
+		return;
+	}
+
 	int client = get_random_alive_survivor();
 	if (client) {
 		
@@ -594,7 +641,7 @@ Action on_shoved(BehaviorAction action, int actor, int shover, ActionDesiredResu
 
 void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 {
-	// Prevent insta attack from SI after shove.
+	// Prevent insta attack from special infected after shove.
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
 	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
@@ -607,7 +654,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			
 			SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") | IN_ATTACK2);
 			
-			// Allow SI to attack again after delay.
+			// Allow special infected to attack again after delay.
 			CreateTimer(1.5, clear_in_attack2, userid, TIMER_FLAG_NO_MAPCHANGE);
 
 		}
@@ -720,20 +767,24 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
-	delete g_hspawn_timer;
+	on_end();
 }
 
 public void OnMapEnd()
 {
+	on_end();
+}
+
+void on_end()
+{
 	delete g_hspawn_timer;
+	for (int i = 0; i < SI_TYPES; ++i)
+		g_si_recently_killed[i] = 0;
 }
 
 public void OnServerEnterHibernation()
 {
-	if (g_is_maxedout) {
-		HookEvent("player_death", event_player_death);
-		g_is_maxedout = false;
-	}
+	g_is_maxedout = false;
 }
 
 #if DEBUG_DAMAGE_MOD

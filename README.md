@@ -25,6 +25,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 30.0.0
+- Set minimum delay from the special infected death and its next possible spawn.
+
 Version 29.2.0
 - Revert minimum spawn delay.
 - Reorganize code.
