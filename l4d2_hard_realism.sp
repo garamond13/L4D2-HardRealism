@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.0.0"
+#define VERSION "30.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -209,7 +209,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
+	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients) {
 		char classname[32];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
@@ -234,7 +234,7 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVORS) {
+	if (client && GetClientTeam(client) == TEAM_SURVIVORS) {
 
 		// First make sure we are not rehooking on_take_damage_survivor.
 		SDKUnhook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
@@ -253,7 +253,7 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	// Hunter damage to survivors.
-	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
+	if (attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_INFECTED && GetEntProp(attacker, Prop_Send, "m_zombieClass") == ZOMBIE_CLASS_HUNTER) {
 		damage *= 0.5;
 
 		#if DEBUG_DAMAGE_MOD
@@ -273,7 +273,7 @@ Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float&
 void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client && IsClientInGame(client)) {
+	if (client) {
 		if (!g_is_maxedout && GetClientTeam(client) == TEAM_SURVIVORS)
 			count_alive_survivors();
 
@@ -500,7 +500,7 @@ void fake_z_spawn_old(Handle timer, int data)
 		PrintToConsoleAll("[HR] fake_z_spawn_old(): g_si_recently_killed[%s] = %i; RECREATING TIMER AND RETURNING!", g_debug_si_indexes[data], g_si_recently_killed[data]);
 		#endif
 
-		CreateTimer(0.1, fake_z_spawn_old, data, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.2, fake_z_spawn_old, data, TIMER_FLAG_NO_MAPCHANGE);
 		return;
 	}
 
@@ -644,7 +644,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	// Prevent insta attack from special infected after shove.
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
-	if (client && IsClientInGame(client) && GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
+	if (client && GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
 		int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
 		if (zombie_class == ZOMBIE_CLASS_SMOKER || zombie_class == ZOMBIE_CLASS_BOOMER || zombie_class == ZOMBIE_CLASS_HUNTER || zombie_class == ZOMBIE_CLASS_SPITTER || zombie_class == ZOMBIE_CLASS_JOCKEY) {
 			
@@ -699,7 +699,7 @@ void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
 
 Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
-	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) && GetClientTeam(attacker) == TEAM_SURVIVORS) {
+	if (attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_SURVIVORS) {
 
 		#if DEBUG_CHARGER
 		char attacker_name[32];
