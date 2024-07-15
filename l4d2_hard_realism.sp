@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.1.0"
+#define VERSION "30.2.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -103,8 +103,8 @@ Handle g_hweapon_trie;
 // Is MaxedOut mod active? If not Normal mod will be active.
 bool g_is_maxedout;
 
-// Used by GetVScriptOutput().
-ConVar gCvarBuffer;
+// Only used internaly.
+Handle g_hhr_istankinplay;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -132,14 +132,13 @@ public void OnPluginStart()
 	HookEvent("charger_carry_start", event_charger_carry_start);
 	HookEvent("charger_carry_end", event_charger_carry_end);
 	HookEvent("tongue_grab", event_tongue_grab);
-	HookEvent("round_end", event_round_end, EventHookMode_Pre);
+	HookEvent("round_end", event_round_end);
 
 	// Register new console commands.
 	RegConsoleCmd("hr_getmod", command_hr_getmod);
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
-	// Used by GetVScriptOutput().
-	gCvarBuffer = CreateConVar("sm_vscript_return", "", "Buffer used to return vscript values. Do not use.");
+	g_hhr_istankinplay = CreateConVar("hr_istankinplay", "0");
 }
 
 public void OnConfigsExecuted()
@@ -394,18 +393,22 @@ void auto_spawn_si(Handle timer)
 
 				// Idealy should count only aggroed tanks.
 				case ZOMBIE_CLASS_TANK: {
-					char buffer[128]; // GetVScriptOutput() requires large buffer.
-					
-					// Returns "true" if any tanks are aggro on survivors.
-					GetVScriptOutput("Director.IsTankInPlay()", buffer, sizeof(buffer));
-					
+
+					// Run VScript code.
+					int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+					DispatchSpawn(logic);
+					SetVariantString("Convars.SetValue(\"hr_istankinplay\",Director.IsTankInPlay());");
+					AcceptEntityInput(logic, "RunScriptCode");
+					AcceptEntityInput(logic, "Kill");
+
 					#if DEBUG_SI_SPAWN
-					PrintToConsoleAll("[HR] auto_spawn_si(): Director.IsTankInPlay() = %s", buffer);
+					PrintToConsoleAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hhr_istankinplay));
 					#endif
 
-					if (!strcmp(buffer, "true"))
+					if (GetConVarBool(g_hhr_istankinplay))
 						++si_total_count;
 				}
+
 			}
 		}
 	}
@@ -594,7 +597,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
-	if (!strcmp(classname, "weapon_melee") && isn_zero(damage)) {
+	if (!strcmp(classname, "weapon_melee") && !is_zero(damage)) {
 		damage = 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
@@ -721,47 +724,52 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 	int smoker = GetClientOfUserId(GetEventInt(event, "userid"));
 	int victim_id = GetEventInt(event, "victim");
 	int victim = GetClientOfUserId(victim_id);
-	if (victim) {
+	if (smoker && victim) {
+
+		// We only need to fix things if the victim is not on "worldspawn".
 		int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
-		if (ground_entity != -1 && smoker && IsClientInGame(smoker) && IsClientInGame(victim)) {
-
-			// Get origins.
-			float smoker_origin[3];
-			float victim_origin[3];
-			GetClientAbsOrigin(smoker, smoker_origin);
-			GetClientAbsOrigin(victim, victim_origin);
-
+		if (ground_entity != -1) {
 			char classname[16];
 			GetEntityClassname(ground_entity, classname, sizeof(classname));
-			if (smoker_origin[2] > victim_origin[2] && strcmp(classname, "worldspawn")) {
 
-				#if DEBUG_SMOKER
-				char client_name[32];
-				GetClientName(victim, client_name, sizeof(client_name));
-				PrintToChatAll("[HR] event_tongue_grab(): victim = %s", client_name);
-				#endif
+			#if DEBUG_SMOKER
+			PrintToChatAll("[HR] event_tongue_grab(): ground_entity = %s", classname);
+			#endif
+			
+			if (strcmp(classname, "worldspawn")) {
+				
+				// We only need to fix things if the smoker is above the victim.
+				float smoker_origin[3];
+				float victim_origin[3];
+				GetClientAbsOrigin(smoker, smoker_origin);
+				GetClientAbsOrigin(victim, victim_origin);
+				if (smoker_origin[2] > victim_origin[2]) {
 
-				// Boilerplate for running VScript code.
-				static int logic = INVALID_ENT_REFERENCE;
-				if (logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic)) {
-					logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
-					if (logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic))
-						SetFailState("Could not create 'logic_script'");
+					#if DEBUG_SMOKER
+					PrintToChatAll("[HR] event_tongue_grab(): smoker_origin.z > victim_origin.z");
+					#endif
+
+					// Run VScript code.
+					//
+
+					int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
 					DispatchSpawn(logic);
+					char buffer[256];
+
+					// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
+					FormatEx(buffer, sizeof(buffer), "local v=GetPlayerFromUserID(%i);NetProps.SetPropEntity(v,\"m_hGroundEntity\",null);v.SetOrigin(v.GetOrigin()+Vector(0,0,20));v.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
+
+					SetVariantString(buffer);
+					AcceptEntityInput(logic, "RunScriptCode");
+					AcceptEntityInput(logic, "Kill");
+
+					//
+
 				}
-
-				char buffer[256];
-
-				// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
-				FormatEx(buffer, sizeof(buffer), "local victim=GetPlayerFromUserID(%i);NetProps.SetPropEntity(victim,\"m_hGroundEntity\",null);victim.SetOrigin(victim.GetOrigin()+Vector(0,0,20));victim.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
-
-				// Run code.
-				SetVariantString(buffer);
-				AcceptEntityInput(logic, "RunScriptCode");
-				AcceptEntityInput(logic, "Kill");
 
 			}
 		}
+
 	}
 }
 
@@ -812,44 +820,6 @@ void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 // Extra stock functions
 //
 
-// Source https://forums.alliedmods.net/showthread.php?t=317145
-// If <RETURN> </RETURN> is removed as suggested.
-/**
-* Runs a single line of VScript code and returns values from it.
-*
-* @param	code			The code to run.
-* @param	buffer			Buffer to copy to.
-* @param	maxlength		Maximum size of the buffer.
-* @return	True on success, false otherwise.
-* @error	Invalid code.
-*/
-stock bool GetVScriptOutput(char[] code, char[] buffer, int maxlength)
-{
-	static int logic = INVALID_ENT_REFERENCE;
-	if( logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic) )
-	{
-		logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
-		if( logic == INVALID_ENT_REFERENCE || !IsValidEntity(logic) )
-			SetFailState("Could not create 'logic_script'");
-
-		DispatchSpawn(logic);
-	}
-	Format(buffer, maxlength, "Convars.SetValue(\"sm_vscript_return\", \"\" + %s + \"\");", code);
-
-	// Run code
-	SetVariantString(buffer);
-	AcceptEntityInput(logic, "RunScriptCode");
-	AcceptEntityInput(logic, "Kill");
-
-	// Retrieve value and return to buffer
-	gCvarBuffer.GetString(buffer, maxlength);
-	gCvarBuffer.SetString("");
-
-	if( buffer[0] == '\x0')
-		return false;
-	return true;
-}
-
 /*
 Returns client of random alive survivor or 0 if there are no alive survivors.
 */
@@ -872,9 +842,9 @@ stock int clamp(int val, int min, int max)
 }
 
 /*
-Safe check is float val not zero.
+Safe check is float val zero.
 */
-stock bool isn_zero(float val)
+stock bool is_zero(float val)
 {
-	return FloatAbs(val) >= 0.000001;
+	return FloatAbs(val) < 0.000001;
 }

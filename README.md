@@ -25,6 +25,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 30.2.0
+- Optimizations.
+
 Version 30.1.0
 - Optimizations.
 
