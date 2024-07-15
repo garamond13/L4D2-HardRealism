@@ -708,6 +708,8 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 {
 	// Smoker insta grab fix.
+	//
+
 	int victim_id = GetEventInt(event, "victim");
 	int victim = GetClientOfUserId(victim_id);
 
@@ -754,6 +756,9 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 		}
 	}
+
+	//
+	
 }
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
