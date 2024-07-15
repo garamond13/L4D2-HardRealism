@@ -25,6 +25,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 30.3.0
+- Optimizations.
+- Make moded weapon damage more reliable.
+
 Version 30.2.0
 - Optimizations.
 

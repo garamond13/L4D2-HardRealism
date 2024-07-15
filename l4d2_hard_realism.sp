@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.2.0"
+#define VERSION "30.3.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -120,8 +120,8 @@ public void OnPluginStart()
 	g_hweapon_trie = CreateTrie();
 	SetTrieValue(g_hweapon_trie, "weapon_hunting_rifle", 38.0);
 	SetTrieValue(g_hweapon_trie, "weapon_sniper_military", 38.0);
-	SetTrieValue(g_hweapon_trie, "weapon_sniper_scout", 75.0);
-	SetTrieValue(g_hweapon_trie, "weapon_sniper_awp", 150.0);
+	SetTrieValue(g_hweapon_trie, "weapon_sniper_scout", 76.0);
+	SetTrieValue(g_hweapon_trie, "weapon_sniper_awp", 152.0);
 
 	// Hook game events.
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
@@ -132,7 +132,7 @@ public void OnPluginStart()
 	HookEvent("charger_carry_start", event_charger_carry_start);
 	HookEvent("charger_carry_end", event_charger_carry_end);
 	HookEvent("tongue_grab", event_tongue_grab);
-	HookEvent("round_end", event_round_end);
+	HookEvent("round_end", event_round_end, EventHookMode_PostNoCopy);
 
 	// Register new console commands.
 	RegConsoleCmd("hr_getmod", command_hr_getmod);
@@ -233,7 +233,7 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client && GetClientTeam(client) == TEAM_SURVIVORS) {
+	if (GetClientTeam(client) == TEAM_SURVIVORS) {
 
 		// First make sure we are not rehooking on_take_damage_survivor.
 		SDKUnhook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
@@ -543,47 +543,34 @@ void fake_z_spawn_old(Handle timer, int data)
 			KickClient(bot);
 
 	}
-
-	#if DEBUG_SI_SPAWN
-	else
-		PrintToConsoleAll("[HR] fake_z_spawn_old(): INVALID CLIENT!");
-	#endif
-
 }
 
 void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client) {
 
-		// Tank hp on 2 alive survivors = 10447.
-		// Tank hp on 3 alive survivors = 14449.
-		// Tank hp on 4 alive survivors = 18189.
-		int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.8));
+	// Tank hp on 2 alive survivors = 10447.
+	// Tank hp on 3 alive survivors = 14449.
+	// Tank hp on 4 alive survivors = 18189.
+	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.8));
 		
-		SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
-		SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
+	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
+	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-		// Tank burn time on 2 alive survivors = 111 s (1:51 min).
-		// Tank burn time on 3 alive survivors = 154 s (2:34 min).
-		// Tank burn time on 4 alive survivors = 193 s (3:13 min).
-		// The constant factor was calculated from default values.
-		SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
+	// Tank burn time on 2 alive survivors = 111 s (1:51 min).
+	// Tank burn time on 3 alive survivors = 154 s (2:34 min).
+	// Tank burn time on 4 alive survivors = 193 s (3:13 min).
+	// The constant factor was calculated from default values.
+	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
-		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
-
-		#if DEBUG_TANK_HP
-		PrintToConsoleAll("[HR] event_tank_spawn(): g_alive_survivors = %i", g_alive_survivors);
-		PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
-		PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
-		PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-		PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
-		#endif
-	}
+	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
 
 	#if DEBUG_TANK_HP
-	else
-		PrintToConsoleAll("[HR] event_tank_spawn(): INVALID CLIENT!");
+	PrintToConsoleAll("[HR] event_tank_spawn(): g_alive_survivors = %i", g_alive_survivors);
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+	PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
 	#endif
 }
 
@@ -647,7 +634,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	// Prevent insta attack from special infected after shove.
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
-	if (client && GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
+	if (GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
 		int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
 		if (zombie_class == ZOMBIE_CLASS_SMOKER || zombie_class == ZOMBIE_CLASS_BOOMER || zombie_class == ZOMBIE_CLASS_HUNTER || zombie_class == ZOMBIE_CLASS_SPITTER || zombie_class == ZOMBIE_CLASS_JOCKEY) {
 			
@@ -680,24 +667,24 @@ void clear_in_attack2(Handle timer, int data)
 
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
 {
-		#if DEBUG_CHARGER
-		char buffer[32];
-		GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
-		PrintToChatAll("[HR] event_charger_carry_start(): victim = %s", buffer);
-		#endif
+	#if DEBUG_CHARGER
+	char buffer[32];
+	GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
+	PrintToChatAll("[HR] event_charger_carry_start(): victim = %s", buffer);
+	#endif
 
-		SDKHook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
+	SDKHook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
 }
 
 void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
 {
-		#if DEBUG_CHARGER
-		char buffer[32];
-		GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
-		PrintToChatAll("[HR] event_charger_carry_end(): victim = %s", buffer);
-		#endif
+	#if DEBUG_CHARGER
+	char buffer[32];
+	GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
+	PrintToChatAll("[HR] event_charger_carry_end(): victim = %s", buffer);
+	#endif
 
-		SDKUnhook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
+	SDKUnhook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
 }
 
 Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
@@ -721,55 +708,51 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 {
 	// Smoker insta grab fix.
-	int smoker = GetClientOfUserId(GetEventInt(event, "userid"));
 	int victim_id = GetEventInt(event, "victim");
 	int victim = GetClientOfUserId(victim_id);
-	if (smoker && victim) {
 
-		// We only need to fix things if the victim is not on "worldspawn".
-		int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
-		if (ground_entity != -1) {
-			char classname[16];
-			GetEntityClassname(ground_entity, classname, sizeof(classname));
+	// We only need to fix things if the victim is not on "worldspawn".
+	int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
+	if (ground_entity != -1) {
+		char classname[16];
+		GetEntityClassname(ground_entity, classname, sizeof(classname));
 
-			#if DEBUG_SMOKER
-			PrintToChatAll("[HR] event_tongue_grab(): ground_entity = %s", classname);
-			#endif
+		#if DEBUG_SMOKER
+		PrintToChatAll("[HR] event_tongue_grab(): ground_entity = %s", classname);
+		#endif
 			
-			if (strcmp(classname, "worldspawn")) {
+		if (strcmp(classname, "worldspawn")) {
 				
-				// We only need to fix things if the smoker is above the victim.
-				float smoker_origin[3];
-				float victim_origin[3];
-				GetClientAbsOrigin(smoker, smoker_origin);
-				GetClientAbsOrigin(victim, victim_origin);
-				if (smoker_origin[2] > victim_origin[2]) {
+			// We only need to fix things if the smoker is above the victim.
+			float smoker_origin[3];
+			float victim_origin[3];
+			GetClientAbsOrigin(GetClientOfUserId(GetEventInt(event, "userid")), smoker_origin);
+			GetClientAbsOrigin(victim, victim_origin);
+			if (smoker_origin[2] > victim_origin[2]) {
 
-					#if DEBUG_SMOKER
-					PrintToChatAll("[HR] event_tongue_grab(): smoker_origin.z > victim_origin.z");
-					#endif
+				#if DEBUG_SMOKER
+				PrintToChatAll("[HR] event_tongue_grab(): smoker_origin.z > victim_origin.z");
+				#endif
 
-					// Run VScript code.
-					//
+				// Run VScript code.
+				//
 
-					int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
-					DispatchSpawn(logic);
-					char buffer[256];
+				int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+				DispatchSpawn(logic);
+				char buffer[256];
 
-					// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
-					FormatEx(buffer, sizeof(buffer), "local v=GetPlayerFromUserID(%i);NetProps.SetPropEntity(v,\"m_hGroundEntity\",null);v.SetOrigin(v.GetOrigin()+Vector(0,0,20));v.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
+				// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
+				FormatEx(buffer, sizeof(buffer), "local v=GetPlayerFromUserID(%i);NetProps.SetPropEntity(v,\"m_hGroundEntity\",null);v.SetOrigin(v.GetOrigin()+Vector(0,0,20));v.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
 
-					SetVariantString(buffer);
-					AcceptEntityInput(logic, "RunScriptCode");
-					AcceptEntityInput(logic, "Kill");
+				SetVariantString(buffer);
+				AcceptEntityInput(logic, "RunScriptCode");
+				AcceptEntityInput(logic, "Kill");
 
-					//
-
-				}
+				//
 
 			}
-		}
 
+		}
 	}
 }
 
