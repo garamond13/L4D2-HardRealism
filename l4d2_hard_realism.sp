@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.0"
+#define VERSION "30.3.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -273,11 +273,10 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client) {
-		if (!g_is_maxedout && GetClientTeam(client) == TEAM_SURVIVORS)
-			count_alive_survivors();
+		int client_team = GetClientTeam(client);
 
 		// Keep track of recently killed special infected.
-		else if (GetClientTeam(client) == TEAM_INFECTED) {
+		if (client_team == TEAM_INFECTED) {
 			const float delay = 4.0;
 			switch (GetEntProp(client, Prop_Send, "m_zombieClass")) {
 				case ZOMBIE_CLASS_SMOKER: {
@@ -307,6 +306,8 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 			}
 		}
 
+		else if (!g_is_maxedout && client_team == TEAM_SURVIVORS)
+			count_alive_survivors();
 	}
 }
 
