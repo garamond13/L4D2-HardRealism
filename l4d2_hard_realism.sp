@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.1"
+#define VERSION "30.3.2"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -91,6 +91,7 @@ static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDE
 #endif
 
 Handle g_hspawn_timer;
+Handle g_hclear_in_attack2_timer;
 int g_alive_survivors;
 int g_si_limit;
 int g_si_recently_killed[SI_TYPES];
@@ -646,7 +647,8 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") | IN_ATTACK2);
 			
 			// Allow special infected to attack again after delay.
-			CreateTimer(1.5, clear_in_attack2, userid, TIMER_FLAG_NO_MAPCHANGE);
+			delete g_hclear_in_attack2_timer;
+			g_hclear_in_attack2_timer = CreateTimer(1.5, clear_in_attack2, userid);
 
 		}
 	}
@@ -664,6 +666,7 @@ void clear_in_attack2(Handle timer, int data)
 		
 		SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") & ~IN_ATTACK2);
 	}
+	g_hclear_in_attack2_timer = null;
 }
 
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
@@ -775,6 +778,7 @@ public void OnMapEnd()
 void on_end()
 {
 	delete g_hspawn_timer;
+	delete g_hclear_in_attack2_timer;
 	for (int i = 0; i < SI_TYPES; ++i)
 		g_si_recently_killed[i] = 0;
 }

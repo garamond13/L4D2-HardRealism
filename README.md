@@ -25,6 +25,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 30.3.2
+- Fix special infected insta attack after shove fix not working as intended.
+
 Version 30.3.1
 - Micro optimizations.
 
