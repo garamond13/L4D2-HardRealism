@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.2"
+#define VERSION "30.3.3"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -91,7 +91,6 @@ static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDE
 #endif
 
 Handle g_hspawn_timer;
-Handle g_hclear_in_attack2_timer;
 int g_alive_survivors;
 int g_si_limit;
 int g_si_recently_killed[SI_TYPES];
@@ -100,6 +99,20 @@ int g_si_recently_killed[SI_TYPES];
 
 // Damage mod
 Handle g_hweapon_trie;
+
+// Special infected insta attack after shove fix.
+//
+
+enum struct Clear_in_attack2_timer
+{
+	int userid;
+	Handle htimer;
+}
+
+// Set array size to the max possible special infected limit.
+Clear_in_attack2_timer g_clear_in_attack2_timers[5];
+
+//
 
 // Is MaxedOut mod active? If not Normal mod will be active.
 bool g_is_maxedout;
@@ -647,8 +660,33 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") | IN_ATTACK2);
 			
 			// Allow special infected to attack again after delay.
-			delete g_hclear_in_attack2_timer;
-			g_hclear_in_attack2_timer = CreateTimer(1.5, clear_in_attack2, userid);
+			//
+
+			const float delay = 1.5;
+
+			// Are we reshoving?
+			for (int i = 0; i < 5; ++i) {
+				if (g_clear_in_attack2_timers[i].userid == userid) {
+					delete g_clear_in_attack2_timers[i].htimer;
+					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+					return;
+				}
+			}
+
+			// Shoving for the first time.
+			for (int i = 0; i < 5; ++i) {
+				if (!g_clear_in_attack2_timers[i].userid) {
+					g_clear_in_attack2_timers[i].userid = userid;
+					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+					return;
+				}
+			}
+
+			#if DEBUG_SHOVE
+			PrintToChatAll("[HR] event_player_shoved(): g_clear_in_attack2_timers has no free slot!");
+			#endif
+
+			//
 
 		}
 	}
@@ -656,7 +694,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 
 void clear_in_attack2(Handle timer, int data)
 {
-	int client = GetClientOfUserId(data);
+	int client = GetClientOfUserId(g_clear_in_attack2_timers[data].userid);
 	if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
 		
 		#if DEBUG_SHOVE
@@ -666,7 +704,8 @@ void clear_in_attack2(Handle timer, int data)
 		
 		SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") & ~IN_ATTACK2);
 	}
-	g_hclear_in_attack2_timer = null;
+	g_clear_in_attack2_timers[data].userid = 0;
+	g_clear_in_attack2_timers[data].htimer = null;
 }
 
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
@@ -778,7 +817,10 @@ public void OnMapEnd()
 void on_end()
 {
 	delete g_hspawn_timer;
-	delete g_hclear_in_attack2_timer;
+	for (int i = 0; i < 5; ++i) {
+		g_clear_in_attack2_timers[i].userid = 0;
+		delete g_clear_in_attack2_timers[i].htimer;
+	}
 	for (int i = 0; i < SI_TYPES; ++i)
 		g_si_recently_killed[i] = 0;
 }
