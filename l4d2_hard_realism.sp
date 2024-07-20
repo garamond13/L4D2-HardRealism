@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.3"
+#define VERSION "30.3.4"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -414,7 +414,7 @@ void auto_spawn_si(Handle timer)
 					DispatchSpawn(logic);
 					SetVariantString("Convars.SetValue(\"hr_istankinplay\",Director.IsTankInPlay());");
 					AcceptEntityInput(logic, "RunScriptCode");
-					AcceptEntityInput(logic, "Kill");
+					RemoveEntity(logic);
 
 					#if DEBUG_SI_SPAWN
 					PrintToConsoleAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hhr_istankinplay));
@@ -657,7 +657,8 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			PrintToChatAll("[HR] event_player_shoved(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
 			#endif
 			
-			SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") | IN_ATTACK2);
+			static const char m_afButtonDisabled[] = "m_afButtonDisabled";
+			SetEntProp(client, Prop_Data, m_afButtonDisabled, GetEntProp(client, Prop_Data, m_afButtonDisabled) | IN_ATTACK2);
 			
 			// Allow special infected to attack again after delay.
 			//
@@ -702,7 +703,8 @@ void clear_in_attack2(Handle timer, int data)
 		PrintToChatAll("[HR] clear_in_attack2(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
 		#endif
 		
-		SetEntProp(client, Prop_Data, "m_afButtonDisabled", GetEntProp(client, Prop_Data, "m_afButtonDisabled") & ~IN_ATTACK2);
+		static const char m_afButtonDisabled[] = "m_afButtonDisabled";
+		SetEntProp(client, Prop_Data, m_afButtonDisabled, GetEntProp(client, Prop_Data, m_afButtonDisabled) & ~IN_ATTACK2);
 	}
 	g_clear_in_attack2_timers[data].userid = 0;
 	g_clear_in_attack2_timers[data].htimer = null;
@@ -791,7 +793,7 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 				SetVariantString(buffer);
 				AcceptEntityInput(logic, "RunScriptCode");
-				AcceptEntityInput(logic, "Kill");
+				RemoveEntity(logic);
 
 				//
 
