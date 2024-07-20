@@ -618,6 +618,10 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	return Plugin_Continue;
 }
 
+// Common infected shove direction fix.
+// Source: https://forums.alliedmods.net/showthread.php?t=319988
+//
+
 public void OnActionCreated(BehaviorAction action, int owner, const char[] name)
 {
 	if (!strcmp(name, "InfectedShoved"))
@@ -626,10 +630,6 @@ public void OnActionCreated(BehaviorAction action, int owner, const char[] name)
 
 Action on_shoved(BehaviorAction action, int actor, int shover, ActionDesiredResult result)
 {
-	// Common infected shove direction fix.
-	// Source: https://forums.alliedmods.net/showthread.php?t=319988
-	//
-
 	char classname[8];
 	GetEntityClassname(actor, classname, sizeof(classname));
 	if (!strcmp(classname, "witch")) 
@@ -640,9 +640,9 @@ Action on_shoved(BehaviorAction action, int actor, int shover, ActionDesiredResu
 	#endif
 
 	return Plugin_Handled;
-
-	//
 }
+
+//
 
 void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 {
