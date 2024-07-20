@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.4"
+#define VERSION "30.3.5"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -410,7 +410,7 @@ void auto_spawn_si(Handle timer)
 				case ZOMBIE_CLASS_TANK: {
 
 					// Run VScript code.
-					int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+					int logic = CreateEntityByName("logic_script");
 					DispatchSpawn(logic);
 					SetVariantString("Convars.SetValue(\"hr_istankinplay\",Director.IsTankInPlay());");
 					AcceptEntityInput(logic, "RunScriptCode");
@@ -784,7 +784,7 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 				// Run VScript code.
 				//
 
-				int logic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+				int logic = CreateEntityByName("logic_script");
 				DispatchSpawn(logic);
 				char buffer[256];
 
