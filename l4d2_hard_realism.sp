@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.3.5"
+#define VERSION "30.4.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -191,9 +191,9 @@ public void OnConfigsExecuted()
 Action command_hr_getmod(int client, int args)
 {
 	if (g_is_maxedout)
-		PrintToConsole(client, "[HR] MaxedOut mod is active.");
+		PrintToChat(client, "[HR] MaxedOut mod is active.");
 	else // Normal mod.
-		PrintToConsole(client, "[HR] Normal mod is active.");
+		PrintToChat(client, "[HR] Normal mod is active.");
 	return Plugin_Handled;
 }
 
