@@ -49,7 +49,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.4.0"
+#define VERSION "30.4.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -650,8 +650,10 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
 	if (GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
+
+		// smoker(1) or boomer(2) or hunter(3) or spitter(4) or jockey(5)
 		int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
-		if (zombie_class == ZOMBIE_CLASS_SMOKER || zombie_class == ZOMBIE_CLASS_BOOMER || zombie_class == ZOMBIE_CLASS_HUNTER || zombie_class == ZOMBIE_CLASS_SPITTER || zombie_class == ZOMBIE_CLASS_JOCKEY) {
+		if (zombie_class > 0 && zombie_class < 6) {
 			
 			#if DEBUG_SHOVE
 			PrintToChatAll("[HR] event_player_shoved(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
