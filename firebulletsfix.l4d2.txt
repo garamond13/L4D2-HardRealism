@@ -1,0 +1,15 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Offsets"
+		{
+			"Weapon_ShootPosition"
+			{
+				"windows"	"285"
+				"linux"		"286"
+				"mac"		"286"
+			}
+		}
+	}
+}

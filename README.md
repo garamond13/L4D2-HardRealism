@@ -4,6 +4,7 @@ HardRealism is a Left 4 Death 2 mod, a SourceMod plugin.
 
 The goal is to achieve a balance between Realism Expert and Hard Eight (mutation). It's made to be non configurable for consistency and efficiency reasons.
 
+IMPORTANT NOTE: Put the firebulletsfix.l4d2.txt file into "sourcemod/gamedata" folder.
 IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 ## Compilation
@@ -24,6 +25,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 30.5.0
+- Fix hit registration (firebulletsfix).
+- Optimizations.
 
 Version 30.4.1
 - Micro optimizations.

@@ -32,6 +32,7 @@ Version 30
 - Set AWP damage against Common/Uncommon Infected to 150.
 - Set melee damage against Tank to 400.
 - Bots no longer shoot through Survivors.
+- Fix hit registration (firebulletsfix).
 - Fix Common Infected shove direction.
 - Fix Special Infected insta attack after shove.
 - Fix friendly fire while Charger carrys survivor.
@@ -43,13 +44,14 @@ Version 30
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
+#include <dhooks>
 #include <actions>
 
 #pragma semicolon 1
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.4.1"
+#define VERSION "30.5.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -58,6 +60,7 @@ Version 30
 #define DEBUG_SHOVE 0
 #define DEBUG_CHARGER 0
 #define DEBUG_SMOKER 0
+#define DEBUG_FIREBULLETSFIX 0
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -120,6 +123,12 @@ bool g_is_maxedout;
 // Only used internaly.
 Handle g_hhr_istankinplay;
 
+// Used by firebulletsfix.
+Handle g_hweapon_shoot_position;
+Handle g_hweapon_shoot_position_sdkcall;
+bool g_is_weapon_shoot_position_sdkcall;
+float g_old_weapon_shoot_position[MAXPLAYERS + 1][3];
+
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
 	author = "Garamond",
@@ -153,6 +162,17 @@ public void OnPluginStart()
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
 	g_hhr_istankinplay = CreateConVar("hr_istankinplay", "0");
+
+	// For firebulletsfix.
+	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
+	if (!game_data)
+		SetFailState("[HR] ERRROR: No game data present!");
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "Weapon_ShootPosition");
+	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByValue);
+	g_hweapon_shoot_position_sdkcall = EndPrepSDKCall();
+	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
+	delete game_data;
 }
 
 public void OnConfigsExecuted()
@@ -200,16 +220,14 @@ Action command_hr_getmod(int client, int args)
 Action command_hr_switchmod(int client, int args)
 {
 	g_is_maxedout = !g_is_maxedout;
-	char buffer[32];
-	GetClientName(client, buffer, sizeof(buffer));
 	if (g_is_maxedout) {
 		g_alive_survivors = 4;
 		g_si_limit = 5;
-		PrintToChatAll("[HR] MaxedOut mod is activated by %s.", buffer);
+		PrintToChatAll("[HR] MaxedOut mod is activated by %N.", client);
 	}
 	else { // Normal mod.
 		count_alive_survivors();
-		PrintToChatAll("[HR] Normal mod is activated by %s.", buffer);
+		PrintToChatAll("[HR] Normal mod is activated by %N.", client);
 	}
 	return Plugin_Handled;
 }
@@ -548,9 +566,7 @@ void fake_z_spawn_old(Handle timer, int data)
 		SetCommandFlags(z_spawn_old, flags);
 
 		#if DEBUG_SI_SPAWN
-		char buffer[32];
-		GetClientName(client, buffer, sizeof(buffer));
-		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%s]; z_spawns[%s] = %s", client, buffer, g_debug_si_indexes[data], z_spawns[data]);
+		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%N]; z_spawns[%s] = %s", client, client, g_debug_si_indexes[data], z_spawns[data]);
 		#endif
 
 		// Kick the bot.
@@ -617,6 +633,45 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 
 	return Plugin_Continue;
 }
+
+// firebulletsfix
+// Source: https://forums.alliedmods.net/showthread.php?t=315405
+//
+
+public void OnClientPutInServer(int client)
+{
+	if (!IsFakeClient(client))
+		DHookEntity(g_hweapon_shoot_position, true, client);
+}
+
+public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
+{
+	if (!IsFakeClient(client) && IsPlayerAlive(client)) {
+		g_is_weapon_shoot_position_sdkcall = true;
+		SDKCall(g_hweapon_shoot_position_sdkcall, client, g_old_weapon_shoot_position[client]);
+		g_is_weapon_shoot_position_sdkcall = false;
+	}
+	return Plugin_Continue;
+}
+
+MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
+{
+	if (!g_is_weapon_shoot_position_sdkcall) {
+	
+		#if DEBUG_FIREBULLETSFIX
+		float vec[3];
+		DHookGetReturnVector(hReturn, vec);
+		PrintToChat(pThis, "[HR] Old Weapon_ShootPosition: %.2f, %.2f, %.2f", g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
+		PrintToChat(pThis, "[HR] New Weapon_ShootPosition: %.2f, %.2f, %.2f", vec[0], vec[1], vec[2]);
+		#endif
+
+		DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
+		return MRES_Supercede;
+	}
+	return MRES_Ignored;
+}
+
+//
 
 // Common infected shove direction fix.
 // Source: https://forums.alliedmods.net/showthread.php?t=319988
@@ -715,9 +770,7 @@ void clear_in_attack2(Handle timer, int data)
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
 {
 	#if DEBUG_CHARGER
-	char buffer[32];
-	GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
-	PrintToChatAll("[HR] event_charger_carry_start(): victim = %s", buffer);
+	PrintToChatAll("[HR] event_charger_carry_start(): victim = %N", GetClientOfUserId(GetEventInt(event, "victim")));
 	#endif
 
 	SDKHook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
@@ -726,9 +779,7 @@ void event_charger_carry_start(Event event, const char[] name, bool dontBroadcas
 void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
 {
 	#if DEBUG_CHARGER
-	char buffer[32];
-	GetClientName(GetClientOfUserId(GetEventInt(event, "victim")), buffer, sizeof(buffer));
-	PrintToChatAll("[HR] event_charger_carry_end(): victim = %s", buffer);
+	PrintToChatAll("[HR] event_charger_carry_end(): victim = %N", GetClientOfUserId(GetEventInt(event, "victim")));
 	#endif
 
 	SDKUnhook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
@@ -739,11 +790,7 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 	if (attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_SURVIVORS) {
 
 		#if DEBUG_CHARGER
-		char attacker_name[32];
-		char victim_name[32];
-		GetClientName(attacker, attacker_name, sizeof(attacker_name));
-		GetClientName(victim, victim_name, sizeof(victim_name));
-		PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %s, victim = %s", attacker_name, victim_name);
+		PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %N, victim = %N", attacker, victim);
 		#endif
 
 		damage = 0.0;
@@ -838,20 +885,15 @@ public void OnServerEnterHibernation()
 void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 {
 	if (attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker)) {
-		char attacker_name[32];
-		GetClientName(attacker, attacker_name, sizeof(attacker_name));
 		char classname[32];
 		if (attacker == inflictor)
 			GetClientWeapon(inflictor, classname, sizeof(classname));
 		else
 			GetEdictClassname(inflictor, classname, sizeof(classname));
-		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)) {
-			char victim_name[32];
-			GetClientName(victim, victim_name, sizeof(victim_name));
-			PrintToChatAll("%s (%s) %f dmg to %s", attacker_name, classname, damage, victim_name);
-		}
+		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim))
+			PrintToChatAll("%N (%s) %f dmg to %N", attacker, classname, damage, victim);
 		else
-			PrintToChatAll("%s (%s) %f dmg to victim %i", attacker_name, classname, damage, victim);
+			PrintToChatAll("%N (%s) %f dmg to victim %i", attacker, classname, damage, victim);
 	}
 }
 #endif
