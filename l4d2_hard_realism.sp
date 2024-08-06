@@ -51,7 +51,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.5.0"
+#define VERSION "30.5.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -166,7 +166,7 @@ public void OnPluginStart()
 	// For firebulletsfix.
 	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
 	if (!game_data)
-		SetFailState("[HR] ERRROR: No game data present!");
+		SetFailState("[HR] ERROR: gamedata/firebulletsfix.l4d2.txt not present or can't be read!");
 	StartPrepSDKCall(SDKCall_Player);
 	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "Weapon_ShootPosition");
 	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByValue);
