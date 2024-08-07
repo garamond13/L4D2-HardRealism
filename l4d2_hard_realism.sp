@@ -51,7 +51,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.5.1"
+#define VERSION "30.6.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -125,8 +125,6 @@ Handle g_hhr_istankinplay;
 
 // Used by firebulletsfix.
 Handle g_hweapon_shoot_position;
-Handle g_hweapon_shoot_position_sdkcall;
-bool g_is_weapon_shoot_position_sdkcall;
 float g_old_weapon_shoot_position[MAXPLAYERS + 1][3];
 
 public Plugin myinfo = {
@@ -167,12 +165,8 @@ public void OnPluginStart()
 	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
 	if (!game_data)
 		SetFailState("[HR] ERROR: gamedata/firebulletsfix.l4d2.txt not present or can't be read!");
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "Weapon_ShootPosition");
-	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByValue);
-	g_hweapon_shoot_position_sdkcall = EndPrepSDKCall();
 	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
-	delete game_data;
+	CloseHandle(game_data);
 }
 
 public void OnConfigsExecuted()
@@ -646,29 +640,22 @@ public void OnClientPutInServer(int client)
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
 {
-	if (!IsFakeClient(client) && IsPlayerAlive(client)) {
-		g_is_weapon_shoot_position_sdkcall = true;
-		SDKCall(g_hweapon_shoot_position_sdkcall, client, g_old_weapon_shoot_position[client]);
-		g_is_weapon_shoot_position_sdkcall = false;
-	}
+	if (!IsFakeClient(client) && IsPlayerAlive(client))
+		GetClientEyePosition(client, g_old_weapon_shoot_position[client]);
 	return Plugin_Continue;
 }
 
 MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
 {
-	if (!g_is_weapon_shoot_position_sdkcall) {
-	
-		#if DEBUG_FIREBULLETSFIX
-		float vec[3];
-		DHookGetReturnVector(hReturn, vec);
-		PrintToChat(pThis, "[HR] Old Weapon_ShootPosition: %.2f, %.2f, %.2f", g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
-		PrintToChat(pThis, "[HR] New Weapon_ShootPosition: %.2f, %.2f, %.2f", vec[0], vec[1], vec[2]);
-		#endif
+	#if DEBUG_FIREBULLETSFIX
+	float vec[3];
+	DHookGetReturnVector(hReturn, vec);
+	PrintToChat(pThis, "[HR] Old Weapon_ShootPosition: %.2f, %.2f, %.2f", g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
+	PrintToChat(pThis, "[HR] New Weapon_ShootPosition: %.2f, %.2f, %.2f", vec[0], vec[1], vec[2]);
+	#endif
 
-		DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
-		return MRES_Supercede;
-	}
-	return MRES_Ignored;
+	DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
+	return MRES_Supercede;
 }
 
 //
