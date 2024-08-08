@@ -51,7 +51,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.7.0"
+#define VERSION "30.7.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -137,6 +137,13 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
+	// For firebulletsfix.
+	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
+	if (!game_data)
+		SetFailState("[HR] ERROR: gamedata/firebulletsfix.l4d2.txt not present or can't be read!");
+	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
+	CloseHandle(game_data);
+
 	// Map modded damage.
 	g_hweapon_trie = CreateTrie();
 	SetTrieValue(g_hweapon_trie, "weapon_hunting_rifle", 38.0);
@@ -160,13 +167,6 @@ public void OnPluginStart()
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
 	g_hhr_istankinplay = CreateConVar("hr_istankinplay", "0");
-
-	// For firebulletsfix.
-	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
-	if (!game_data)
-		SetFailState("[HR] ERROR: gamedata/firebulletsfix.l4d2.txt not present or can't be read!");
-	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
-	CloseHandle(game_data);
 }
 
 public void OnConfigsExecuted()
