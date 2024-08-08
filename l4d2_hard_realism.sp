@@ -51,7 +51,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.6.0"
+#define VERSION "30.6.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -350,7 +350,7 @@ void count_alive_survivors()
 			++g_alive_survivors;
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] count_alive_survivors(): (BEFORE CLAMP!) g_alive_survivors = %i", g_alive_survivors);
+	PrintToChatAll("[HR] count_alive_survivors(): (BEFORE CLAMP!) g_alive_survivors = %i", g_alive_survivors);
 	#endif
 
 	g_alive_survivors = clamp(g_alive_survivors, 2, 4);
@@ -359,15 +359,15 @@ void count_alive_survivors()
 	g_si_limit = g_alive_survivors + 1;
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] count_alive_survivors(): (AFTER CLAMP!) g_alive_survivors = %i", g_alive_survivors);
-	PrintToConsoleAll("[HR] count_alive_survivors(): g_si_limit = %i", g_si_limit);
+	PrintToChatAll("[HR] count_alive_survivors(): (AFTER CLAMP!) g_alive_survivors = %i", g_alive_survivors);
+	PrintToChatAll("[HR] count_alive_survivors(): g_si_limit = %i", g_si_limit);
 	#endif
 }
 
 void event_player_left_safe_area(Event event, const char[] name, bool dontBroadcast)
 {
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] event_player_left_safe_area()");
+	PrintToChatAll("[HR] event_player_left_safe_area()");
 	#endif
 
 	start_spawn_timer();
@@ -381,7 +381,7 @@ void start_spawn_timer()
 	g_hspawn_timer = CreateTimer(interval, auto_spawn_si);
 
 	#if DEBUG_SI_SPAWN
-	PrintToConsoleAll("[HR] start_spawn_timer(): interval = %f", interval);
+	PrintToChatAll("[HR] start_spawn_timer(): interval = %.2f", interval);
 	#endif
 }
 
@@ -429,7 +429,7 @@ void auto_spawn_si(Handle timer)
 					RemoveEntity(logic);
 
 					#if DEBUG_SI_SPAWN
-					PrintToConsoleAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hhr_istankinplay));
+					PrintToChatAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hhr_istankinplay));
 					#endif
 
 					if (GetConVarBool(g_hhr_istankinplay))
@@ -449,7 +449,7 @@ void auto_spawn_si(Handle timer)
 			size = GetRandomInt(3, size);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] auto_spawn_si(): g_si_limit = %i; si_total_count = %i; size = %i", g_si_limit, si_total_count, size);
+		PrintToChatAll("[HR] auto_spawn_si(): g_si_limit = %i; si_total_count = %i; size = %i", g_si_limit, si_total_count, size);
 		#endif
 
 		// Keep the same order as zombie classes.
@@ -479,13 +479,13 @@ void auto_spawn_si(Handle timer)
 
 			#if DEBUG_SI_SPAWN
 			for (int i = 0; i < SI_TYPES; ++i)
-				PrintToConsoleAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", g_debug_si_indexes[i], tmp_weights[i]);
+				PrintToChatAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", g_debug_si_indexes[i], tmp_weights[i]);
 			#endif
 
 			int index = GetRandomInt(1, tmp_wsum);
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] auto_spawn_si(): index = %i", index);
+			PrintToChatAll("[HR] auto_spawn_si(): index = %i", index);
 			#endif
 
 			// Cycle trough weight ranges, find where the random index falls and pick an appropriate array index.
@@ -500,7 +500,7 @@ void auto_spawn_si(Handle timer)
 			}
 
 			#if DEBUG_SI_SPAWN
-			PrintToConsoleAll("[HR] auto_spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, g_debug_si_indexes[index]);
+			PrintToChatAll("[HR] auto_spawn_si(): range = %i; tmp_wsum = %i; index = %s", range, tmp_wsum, g_debug_si_indexes[index]);
 			#endif
 
 			// Prevent instant spam of all specials at once.
@@ -527,7 +527,7 @@ void fake_z_spawn_old(Handle timer, int data)
 	if (g_si_recently_killed[data] > 0) {
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] fake_z_spawn_old(): g_si_recently_killed[%s] = %i; RECREATING TIMER AND RETURNING!", g_debug_si_indexes[data], g_si_recently_killed[data]);
+		PrintToChatAll("[HR] fake_z_spawn_old(): g_si_recently_killed[%s] = %i; RECREATING TIMER AND RETURNING!", g_debug_si_indexes[data], g_si_recently_killed[data]);
 		#endif
 
 		CreateTimer(0.2, fake_z_spawn_old, data, TIMER_FLAG_NO_MAPCHANGE);
@@ -560,7 +560,7 @@ void fake_z_spawn_old(Handle timer, int data)
 		SetCommandFlags(z_spawn_old, flags);
 
 		#if DEBUG_SI_SPAWN
-		PrintToConsoleAll("[HR] fake_z_spawn_old(): client = %i [%N]; z_spawns[%s] = %s", client, client, g_debug_si_indexes[data], z_spawns[data]);
+		PrintToChatAll("[HR] fake_z_spawn_old(): client = %i [%N]; z_spawns[%s] = %s", client, client, g_debug_si_indexes[data], z_spawns[data]);
 		#endif
 
 		// Kick the bot.
@@ -591,11 +591,9 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
 
 	#if DEBUG_TANK_HP
-	PrintToConsoleAll("[HR] event_tank_spawn(): g_alive_survivors = %i", g_alive_survivors);
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank_hp = %i", tank_hp);
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-	PrintToConsoleAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
+	PrintToChatAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
+	PrintToChatAll("[HR] event_tank_spawn(): tank max hp is %i", GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+	PrintToChatAll("[HR] event_tank_spawn(): tank burn time is %i", GetConVarInt(FindConVar("tank_burn_duration_expert")));
 	#endif
 }
 
@@ -650,8 +648,8 @@ MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
 	#if DEBUG_FIREBULLETSFIX
 	float vec[3];
 	DHookGetReturnVector(hReturn, vec);
-	PrintToChat(pThis, "[HR] Old Weapon_ShootPosition: %.2f, %.2f, %.2f", g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
-	PrintToChat(pThis, "[HR] New Weapon_ShootPosition: %.2f, %.2f, %.2f", vec[0], vec[1], vec[2]);
+	PrintToChatAll("[HR] %N Old Weapon_ShootPosition: %.2f, %.2f, %.2f", pThis, g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
+	PrintToChatAll("[HR] %N New Weapon_ShootPosition: %.2f, %.2f, %.2f", pThis, vec[0], vec[1], vec[2]);
 	#endif
 
 	DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
@@ -664,23 +662,23 @@ MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
 // Source: https://forums.alliedmods.net/showthread.php?t=319988
 //
 
-public void OnActionCreated(BehaviorAction action, int owner, const char[] name)
+public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 {
 	if (!strcmp(name, "InfectedShoved"))
-		action.OnShoved = on_shoved;
+		__action_setlistener(action, __action_processor_OnShoved, on_shoved, false);
 }
 
-Action on_shoved(BehaviorAction action, int actor, int shover, ActionDesiredResult result)
+Action on_shoved(any action, int actor, int entity, ActionDesiredResult result)
 {
 	char classname[8];
 	GetEntityClassname(actor, classname, sizeof(classname));
-	if (!strcmp(classname, "witch")) 
-		return Plugin_Continue;
-	
+
 	#if DEBUG_SHOVE
-	PrintToChatAll("[HR] on_shoved()");
+	PrintToChatAll("[HR] on_shoved(): %s", classname);
 	#endif
 
+	if (!strcmp(classname, "witch")) 
+		return Plugin_Continue;
 	return Plugin_Handled;
 }
 
@@ -878,9 +876,9 @@ void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 		else
 			GetEdictClassname(inflictor, classname, sizeof(classname));
 		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim))
-			PrintToChatAll("%N (%s) %f dmg to %N", attacker, classname, damage, victim);
+			PrintToChatAll("%N (%s) %.2f dmg to %N", attacker, classname, damage, victim);
 		else
-			PrintToChatAll("%N (%s) %f dmg to victim %i", attacker, classname, damage, victim);
+			PrintToChatAll("%N (%s) %.2f dmg to victim %i", attacker, classname, damage, victim);
 	}
 }
 #endif

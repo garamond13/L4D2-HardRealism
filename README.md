@@ -26,6 +26,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 30.6.1
+- Edit common infected shove direction fix.
+- Edit debug.
+
 Version 30.6.0
 - Simplify hit registration fix (firebulletsfix).
 
