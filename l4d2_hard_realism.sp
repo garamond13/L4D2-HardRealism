@@ -51,7 +51,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.6.1"
+#define VERSION "30.7.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -189,9 +189,6 @@ public void OnConfigsExecuted()
 
 	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
-	
-	// Default 1.
-	SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
 
 	// Disbale director spawn special infected.
 	SetConVarInt(FindConVar("z_smoker_limit"), 0);
