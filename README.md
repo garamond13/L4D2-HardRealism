@@ -26,6 +26,12 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 31.0.0
+- Always spawn wandering witches.
+- Fix many IDLE exploits.
+- Fix incapacitated dizzines.
+- Reduce afk timeout.
+
 Version 30.7.1
 - Check for the firebulletsfix.l4d2.txt game data first.
 

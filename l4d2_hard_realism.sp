@@ -5,7 +5,7 @@ Version description
 
 Special Infected (SI) order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 30
+Version 31
 - Normal (default) mod and MaxedOut mod.
 - Get active mode with hr_getmod command.
 - Switch between mods with hr_switchmod command.
@@ -19,6 +19,7 @@ Version 30
 - Special Infected spawn weights in SI order are 60, 100, 60, 100, 60, 60.
 - Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special Infected spawns are randomly delayed in the range [0.4s, 2.2s].
+- Always spawn wandering witches.
 - Set Hunter claw damage to 20.
 - Set Jockey health to 300.
 - Set Jockey ride damage to 15.
@@ -28,10 +29,11 @@ Version 30
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
 - Set Military Sniper damage against Common/Uncommon Infected to 38.
-- Set Scout damage against Common/Uncommon Infected to 75.
-- Set AWP damage against Common/Uncommon Infected to 150.
+- Set Scout damage against Common/Uncommon Infected to 76.
+- Set AWP damage against Common/Uncommon Infected to 152.
 - Set melee damage against Tank to 400.
-- Bots no longer shoot through Survivors.
+- Fix many IDLE exploits.
+- Fix incapacitated dizzines.
 - Fix hit registration (firebulletsfix).
 - Fix Common Infected shove direction.
 - Fix Special Infected insta attack after shove.
@@ -51,7 +53,7 @@ Version 30
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "30.7.1"
+#define VERSION "31.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -138,11 +140,9 @@ public Plugin myinfo = {
 public void OnPluginStart()
 {
 	// For firebulletsfix.
-	Handle game_data = LoadGameConfigFile("firebulletsfix.l4d2");
-	if (!game_data)
-		SetFailState("[HR] ERROR: gamedata/firebulletsfix.l4d2.txt not present or can't be read!");
-	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
-	CloseHandle(game_data);
+	Handle hgame_data = LoadGameConfigFile("firebulletsfix.l4d2");
+	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(hgame_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
+	CloseHandle(hgame_data);
 
 	// Map modded damage.
 	g_hweapon_trie = CreateTrie();
@@ -162,6 +162,11 @@ public void OnPluginStart()
 	HookEvent("tongue_grab", event_tongue_grab);
 	HookEvent("round_end", event_round_end, EventHookMode_PostNoCopy);
 
+	// IDLE exploits fix.
+	// Disable IDLE command.
+	static const char go_away_from_keyboard[] = "go_away_from_keyboard";
+	SetCommandFlags(go_away_from_keyboard, GetCommandFlags(go_away_from_keyboard) | FCVAR_CHEAT);
+	
 	// Register new console commands.
 	RegConsoleCmd("hr_getmod", command_hr_getmod);
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
@@ -171,8 +176,16 @@ public void OnPluginStart()
 
 public void OnConfigsExecuted()
 {	
+	// Disbale director spawn special infected.
+	SetConVarInt(FindConVar("z_smoker_limit"), 0);
+	SetConVarInt(FindConVar("z_boomer_limit"), 0);
+	SetConVarInt(FindConVar("z_hunter_limit"), 0);
+	SetConVarInt(FindConVar("z_spitter_limit"), 0);
+	SetConVarInt(FindConVar("z_jockey_limit"), 0);
+	SetConVarInt(FindConVar("z_charger_limit"), 0);
+
 	// Workaround. It will be halved by on_take_damage().
-	// Default 5, it will be multiplied by 3 on Realsim Expert
+	// Default 5, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
 
 	// Defualt 325.
@@ -187,16 +200,27 @@ public void OnConfigsExecuted()
 	// Default 15.
 	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
 
+	// Set to Morning(2), to always spawn wandering witches.
+	// Default -1.
+	SetConVarInt(FindConVar("sv_force_time_of_day"), 2);
+
 	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
 
-	// Disbale director spawn special infected.
-	SetConVarInt(FindConVar("z_smoker_limit"), 0);
-	SetConVarInt(FindConVar("z_boomer_limit"), 0);
-	SetConVarInt(FindConVar("z_hunter_limit"), 0);
-	SetConVarInt(FindConVar("z_spitter_limit"), 0);
-	SetConVarInt(FindConVar("z_jockey_limit"), 0);
-	SetConVarInt(FindConVar("z_charger_limit"), 0);
+	// Incapacitated dizzines fix.
+	//
+
+	// Default 2.0.
+	SetConVarFloat(FindConVar("survivor_incapacitated_dizzy_severity"), 0.0);
+
+	// Default 2.5.
+	SetConVarFloat(FindConVar("survivor_incapacitated_dizzy_timer"), 0.0);
+
+	//
+
+	// Compensate for IDLE exploits fix.
+	// Default 45.
+	SetConVarInt(FindConVar("director_afk_timeout"), 20);
 }
 
 Action command_hr_getmod(int client, int args)
