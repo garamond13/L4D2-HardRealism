@@ -33,11 +33,11 @@ Version 31
 - Set AWP damage against Common/Uncommon Infected to 152.
 - Set melee damage against Tank to 400.
 - Fix many IDLE exploits.
-- Fix incapacitated dizzines.
+- Fix incapacitated dizziness.
 - Fix hit registration (firebulletsfix).
 - Fix Common Infected shove direction.
 - Fix Special Infected insta attack after shove.
-- Fix friendly fire while Charger carrys survivor.
+- Fix friendly fire while Charger carries survivor.
 - Fix Smoker insta grab.
 */
 
@@ -207,7 +207,7 @@ public void OnConfigsExecuted()
 	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
 
-	// Incapacitated dizzines fix.
+	// Incapacitated dizziness fix.
 	//
 
 	// Default 2.0.
@@ -705,9 +705,11 @@ Action on_shoved(any action, int actor, int entity, ActionDesiredResult result)
 
 //
 
+// Special infected insta attack after shove fix.
+//
+
 void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 {
-	// Prevent insta attack from special infected after shove.
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
 	if (GetClientTeam(client) == TEAM_INFECTED && IsPlayerAlive(client)) {
@@ -773,6 +775,11 @@ void clear_in_attack2(Handle timer, int data)
 	g_clear_in_attack2_timers[data].htimer = null;
 }
 
+//
+
+// Friendly fire while Charger carries survivor fix.
+//
+
 void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
 {
 	#if DEBUG_CHARGER
@@ -805,11 +812,13 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 	return Plugin_Continue;
 }
 
+//
+
+// Smoker insta grab fix.
+//
+
 void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 {
-	// Smoker insta grab fix.
-	//
-
 	int victim_id = GetEventInt(event, "victim");
 	int victim = GetClientOfUserId(victim_id);
 
@@ -856,10 +865,9 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 		}
 	}
-
-	//
-	
 }
+
+//
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
