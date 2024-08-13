@@ -36,6 +36,7 @@ Version 31
 - Fix incapacitated dizziness.
 - Fix hit registration (firebulletsfix).
 - Fix Common Infected shove direction.
+- Fix Jockey insta attack after failed leap.
 - Fix Special Infected insta attack after shove.
 - Fix friendly fire while Charger carries survivor.
 - Fix Smoker insta grab.
@@ -53,7 +54,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.0.0"
+#define VERSION "31.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -63,6 +64,7 @@ Version 31
 #define DEBUG_CHARGER 0
 #define DEBUG_SMOKER 0
 #define DEBUG_FIREBULLETSFIX 0
+#define DEBUG_JOCKEY 0
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -90,7 +92,7 @@ Version 31
 #define SI_INDEX_JOCKEY 4
 #define SI_INDEX_CHARGER 5
 
-#if (DEBUG_SI_SPAWN || DEBUG_SHOVE)
+#if (DEBUG_SI_SPAWN || DEBUG_SHOVE || DEBUG_JOCKEY)
 // Keep the same order as zombie classes.
 static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_BOOMER", "SI_INDEX_HUNTER", "SI_INDEX_SPITTER", "SI_INDEX_JOCKEY", "SI_INDEX_CHARGER" };
 #endif
@@ -106,6 +108,7 @@ int g_si_recently_killed[SI_TYPES];
 Handle g_hweapon_trie;
 
 // Special infected insta attack after shove fix.
+// Jockey insta attack after failed leap fix.
 //
 
 enum struct Clear_in_attack2_timer
@@ -141,7 +144,7 @@ public void OnPluginStart()
 {
 	// For firebulletsfix.
 	Handle hgame_data = LoadGameConfigFile("firebulletsfix.l4d2");
-	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(hgame_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, weapon_shoot_position_post);
+	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(hgame_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
 	CloseHandle(hgame_data);
 
 	// Map modded damage.
@@ -256,7 +259,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients) {
-		char classname[32];
+		char classname[24];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
 		// Get modded damage.
@@ -664,13 +667,13 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	return Plugin_Continue;
 }
 
-MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
+MRESReturn on_weapon_shoot_position(int pThis, DHookReturn hReturn)
 {
 	#if DEBUG_FIREBULLETSFIX
 	float vec[3];
 	DHookGetReturnVector(hReturn, vec);
-	PrintToChatAll("[HR] %N Old Weapon_ShootPosition: %.2f, %.2f, %.2f", pThis, g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
-	PrintToChatAll("[HR] %N New Weapon_ShootPosition: %.2f, %.2f, %.2f", pThis, vec[0], vec[1], vec[2]);
+	PrintToChatAll("[HR] %N Old ShootPosition: %.2f, %.2f, %.2f", pThis, g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
+	PrintToChatAll("[HR] %N New ShootPosition: %.2f, %.2f, %.2f", pThis, vec[0], vec[1], vec[2]);
 	#endif
 
 	DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
@@ -679,23 +682,26 @@ MRESReturn weapon_shoot_position_post(int pThis, DHookReturn hReturn)
 
 //
 
-// Common infected shove direction fix.
-// Source: https://forums.alliedmods.net/showthread.php?t=319988
-//
-
 public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 {
+	// For common infected shove direction fix.
 	if (!strcmp(name, "InfectedShoved"))
-		__action_setlistener(action, __action_processor_OnShoved, on_shoved, false);
+		__action_setlistener(action, __action_processor_OnShoved, infected_shoved_on_shoved, false);
+	
+	// For jockey insta attack after failed leap fix.
+	else if (!strcmp(name, "JockeyAttack"))
+		__action_setlistener(action, __action_processor_OnResume, jockey_attack_on_resume, true);
 }
 
-Action on_shoved(any action, int actor, int entity, ActionDesiredResult result)
+// Common infected shove direction fix.
+// Source: https://forums.alliedmods.net/showthread.php?t=319988
+Action infected_shoved_on_shoved(any action, int actor, int entity, ActionDesiredResult result)
 {
 	char classname[8];
 	GetEntityClassname(actor, classname, sizeof(classname));
 
 	#if DEBUG_SHOVE
-	PrintToChatAll("[HR] on_shoved(): %s", classname);
+	PrintToChatAll("[HR] infected_shoved_on_shoved(): %s", classname);
 	#endif
 
 	if (!strcmp(classname, "witch")) 
@@ -703,11 +709,52 @@ Action on_shoved(any action, int actor, int entity, ActionDesiredResult result)
 	return Plugin_Handled;
 }
 
-//
+// Jockey insta attack after failed leap fix.
+Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionResult result)
+{
+	#if DEBUG_JOCKEY
+	PrintToChatAll("[HR] jockey_attack_on_resume()");
+	#endif
+
+	// Prevent jockey from attacking.
+	static const char m_afButtonDisabled[] = "m_afButtonDisabled";
+	SetEntProp(actor, Prop_Data, m_afButtonDisabled, GetEntProp(actor, Prop_Data, m_afButtonDisabled) | IN_ATTACK2);
+
+	// Allow jockey to attack again after delay.
+	//
+
+	int userid = GetClientUserId(actor);
+	const float delay = 0.2;
+
+	// We already have a timer?
+	for (int i = 0; i < 5; ++i)
+		if (g_clear_in_attack2_timers[i].userid == userid) {
+
+			#if DEBUG_JOCKEY
+			PrintToChatAll("[HR] jockey_attack_on_resume(): We already have a timer!");
+			#endif
+
+			return Plugin_Continue;
+		}
+
+	// We don't have a timer.
+	for (int i = 0; i < 5; ++i)
+		if (!g_clear_in_attack2_timers[i].userid) {
+			g_clear_in_attack2_timers[i].userid = userid;
+			g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+			return Plugin_Continue;
+		}
+
+	#if DEBUG_SHOVE
+	PrintToChatAll("[HR] jockey_attack_on_resume(): g_clear_in_attack2_timers has no free slot!");
+	#endif
+
+	//
+
+	return Plugin_Continue;
+}
 
 // Special infected insta attack after shove fix.
-//
-
 void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 {
 	int userid = GetEventInt(event, "userid");
@@ -722,6 +769,7 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			PrintToChatAll("[HR] event_player_shoved(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
 			#endif
 			
+			// Prevent special infected from attacking.
 			static const char m_afButtonDisabled[] = "m_afButtonDisabled";
 			SetEntProp(client, Prop_Data, m_afButtonDisabled, GetEntProp(client, Prop_Data, m_afButtonDisabled) | IN_ATTACK2);
 			
@@ -730,23 +778,21 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 
 			const float delay = 1.5;
 
-			// Are we reshoving?
-			for (int i = 0; i < 5; ++i) {
+			// Are we reshoving or we already have timer?
+			for (int i = 0; i < 5; ++i)
 				if (g_clear_in_attack2_timers[i].userid == userid) {
 					delete g_clear_in_attack2_timers[i].htimer;
 					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
 					return;
 				}
-			}
 
 			// Shoving for the first time.
-			for (int i = 0; i < 5; ++i) {
+			for (int i = 0; i < 5; ++i)
 				if (!g_clear_in_attack2_timers[i].userid) {
 					g_clear_in_attack2_timers[i].userid = userid;
 					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
 					return;
 				}
-			}
 
 			#if DEBUG_SHOVE
 			PrintToChatAll("[HR] event_player_shoved(): g_clear_in_attack2_timers has no free slot!");
@@ -758,12 +804,14 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
+// For jockey insta attack after failed leap fix.
+// For special infected insta attack after shove fix.
 void clear_in_attack2(Handle timer, int data)
 {
 	int client = GetClientOfUserId(g_clear_in_attack2_timers[data].userid);
 	if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
 		
-		#if DEBUG_SHOVE
+		#if (DEBUG_SHOVE || DEBUG_JOCKEY)
 		int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
 		PrintToChatAll("[HR] clear_in_attack2(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
 		#endif
@@ -774,8 +822,6 @@ void clear_in_attack2(Handle timer, int data)
 	g_clear_in_attack2_timers[data].userid = 0;
 	g_clear_in_attack2_timers[data].htimer = null;
 }
-
-//
 
 // Friendly fire while Charger carries survivor fix.
 //
@@ -815,8 +861,6 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 //
 
 // Smoker insta grab fix.
-//
-
 void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 {
 	int victim_id = GetEventInt(event, "victim");
@@ -825,7 +869,7 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 	// We only need to fix things if the victim is not on "worldspawn".
 	int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
 	if (ground_entity != -1) {
-		char classname[16];
+		char classname[12];
 		GetEntityClassname(ground_entity, classname, sizeof(classname));
 
 		#if DEBUG_SMOKER
@@ -850,7 +894,7 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 				int logic = CreateEntityByName("logic_script");
 				DispatchSpawn(logic);
-				char buffer[256];
+				char buffer[172];
 
 				// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
 				FormatEx(buffer, sizeof(buffer), "local v=GetPlayerFromUserID(%i);NetProps.SetPropEntity(v,\"m_hGroundEntity\",null);v.SetOrigin(v.GetOrigin()+Vector(0,0,20));v.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
@@ -866,8 +910,6 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 		}
 	}
 }
-
-//
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {

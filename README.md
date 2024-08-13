@@ -26,6 +26,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 31.1.0
+- Fix jockey insta attack after failed leap.
+- Micro optimizations.
+
 Version 31.0.0
 - Always spawn wandering witches.
 - Fix many IDLE exploits.
