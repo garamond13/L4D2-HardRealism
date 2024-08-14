@@ -40,6 +40,7 @@ Version 31
 - Fix Special Infected insta attack after shove.
 - Fix friendly fire while Charger carries survivor.
 - Fix Smoker insta grab.
+- Fix spitter acid spread.
 */
 
 // Note that in SourcePawn variables and arrays should be zero initialized by default.
@@ -54,7 +55,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.1.0"
+#define VERSION "31.2.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -65,6 +66,7 @@ Version 31
 #define DEBUG_SMOKER 0
 #define DEBUG_FIREBULLETSFIX 0
 #define DEBUG_JOCKEY 0
+#define DEBUG_SPITTER 0
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -107,6 +109,16 @@ int g_si_recently_killed[SI_TYPES];
 // Damage mod
 Handle g_hweapon_trie;
 
+// Only used internaly.
+Handle g_hhr_istankinplay;
+
+// Is MaxedOut mod active? If not Normal mod will be active.
+bool g_is_maxedout;
+
+// For firebulletsfix.
+Handle g_hweapon_shoot_position;
+float g_old_weapon_shoot_position[MAXPLAYERS + 1][3];
+
 // Special infected insta attack after shove fix.
 // Jockey insta attack after failed leap fix.
 //
@@ -122,15 +134,8 @@ Clear_in_attack2_timer g_clear_in_attack2_timers[5];
 
 //
 
-// Is MaxedOut mod active? If not Normal mod will be active.
-bool g_is_maxedout;
-
-// Only used internaly.
-Handle g_hhr_istankinplay;
-
-// Used by firebulletsfix.
-Handle g_hweapon_shoot_position;
-float g_old_weapon_shoot_position[MAXPLAYERS + 1][3];
+// Spitter acid spread fix.
+int g_spitter_projectile;
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -163,6 +168,7 @@ public void OnPluginStart()
 	HookEvent("charger_carry_start", event_charger_carry_start);
 	HookEvent("charger_carry_end", event_charger_carry_end);
 	HookEvent("tongue_grab", event_tongue_grab);
+	HookEvent("spit_burst", event_spit_burst);
 	HookEvent("round_end", event_round_end, EventHookMode_PostNoCopy);
 
 	// IDLE exploits fix.
@@ -254,6 +260,10 @@ public void OnEntityCreated(int entity, const char[] classname)
 {
 	if (!strcmp(classname, "infected"))
 		SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage_infected);
+	
+	// For spitter acid spread fix.
+	else if (!strcmp(classname, "spitter_projectile"))
+		g_spitter_projectile = entity;
 }
 
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
@@ -909,6 +919,32 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 
 		}
 	}
+}
+
+// Spitter acid spread fix.
+void event_spit_burst(Event event, const char[] name, bool dontBroadcast)
+{
+	#if DEBUG_SPITTER
+	PrintToChatAll("[HR] event_spit_burst()");
+	#endif
+
+	if (IsValidEntity(g_spitter_projectile)) {
+		int logic = CreateEntityByName("logic_script");
+		DispatchSpawn(logic);
+		char buffer[280];
+
+		// Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945425218
+		FormatEx(buffer, sizeof(buffer),"local p=EntIndexToHScript(%i);local s=EntIndexToHScript(%i);local pp=p.GetOrigin();local t={start=s.GetOrigin(),end=pp,mask=DirectorScript.TRACE_MASK_SHOT,ignore=p};TraceLine(t);if(\"enthit\" in t && t.enthit.GetClassname() in {prop_physics=0,prop_dynamic=0})s.SetOrigin(pp);", g_spitter_projectile, GetEventInt(event, "subject"));
+	
+		SetVariantString(buffer);
+		AcceptEntityInput(logic, "RunScriptCode");
+		RemoveEntity(logic);
+	}
+
+	#if DEBUG_SPITTER
+	else
+		PrintToChatAll("[HR] event_spit_burst(): g_spitter_projectile IS INVALID!");
+	#endif
 }
 
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
