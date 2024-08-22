@@ -55,7 +55,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.2.0"
+#define VERSION "31.2.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -67,6 +67,13 @@ Version 31
 #define DEBUG_FIREBULLETSFIX 0
 #define DEBUG_JOCKEY 0
 #define DEBUG_SPITTER 0
+
+// From command "maxplayers".
+// "maxplayers" is "18"
+// "mininum_maxplayers" is "18"
+// "absolute_maxplayers" is "18"
+// "default_maxplayers" is "18"
+#define L4D2_MAXPLAYERS 18
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -117,7 +124,7 @@ bool g_is_maxedout;
 
 // For firebulletsfix.
 Handle g_hweapon_shoot_position;
-float g_old_weapon_shoot_position[MAXPLAYERS + 1][3];
+float g_old_weapon_shoot_position[L4D2_MAXPLAYERS + 1][3];
 
 // Special infected insta attack after shove fix.
 // Jockey insta attack after failed leap fix.
