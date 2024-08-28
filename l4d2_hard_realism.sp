@@ -55,7 +55,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.2.2"
+#define VERSION "31.2.3"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -217,8 +217,15 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
 
 	// Set to Morning(2), to always spawn wandering witches.
+	// Unless c6m1_riverbank, we don't want wandering bride witch.
 	// Default -1.
-	SetConVarInt(FindConVar("sv_force_time_of_day"), 2);
+	char buffer[16];
+	GetCurrentMap(buffer, sizeof(buffer));
+	static char sv_force_time_of_day[] = "sv_force_time_of_day";
+	if (!strcmp(buffer, "c6m1_riverbank"))
+		SetConVarInt(FindConVar(sv_force_time_of_day), -1);
+	else
+		SetConVarInt(FindConVar(sv_force_time_of_day), 2);
 
 	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
