@@ -26,6 +26,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 31.2.2
+- Make timers more accurate.
+
 Version 31.2.1
 - Micro optimizations.
 

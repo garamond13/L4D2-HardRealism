@@ -55,7 +55,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.2.1"
+#define VERSION "31.2.2"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -418,7 +418,7 @@ void start_spawn_timer()
 {
 	float interval = 17.0;
 	if (!g_is_maxedout)
-		interval = GetRandomFloat(17.0, 38.0);
+		interval = GetRandomFloat(17.0, 38.0) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
 	g_hspawn_timer = CreateTimer(interval, auto_spawn_si);
 
 	#if DEBUG_SI_SPAWN
@@ -546,7 +546,7 @@ void auto_spawn_si(Handle timer)
 
 			// Prevent instant spam of all specials at once.
 			// Min and max delays are chosen more for technical reasons than gameplay reasons.
-			delay += GetRandomFloat(0.4, 1.2);
+			delay += GetRandomFloat(0.4, 1.2) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
 			CreateTimer(delay, fake_z_spawn_old, index, TIMER_FLAG_NO_MAPCHANGE);
 
 			--size;
