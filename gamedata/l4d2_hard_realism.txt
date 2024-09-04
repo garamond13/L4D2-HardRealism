@@ -1,0 +1,26 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Offsets"
+		{
+			"Weapon_ShootPosition"
+			{
+				"windows" "285"
+				"linux" "286"
+			}
+
+			"CBaseEntity::MyNextBotPointer"
+			{
+				"windows" "81"
+				"linux" "82"
+			}
+
+			"INextBot::GetBodyInterface"
+			{
+				"windows" "48"
+				"linux" "49"
+			}
+		}
+	}
+}

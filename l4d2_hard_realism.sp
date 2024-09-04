@@ -36,6 +36,7 @@ Version 31
 - Fix incapacitated dizziness.
 - Fix hit registration (firebulletsfix).
 - Fix Common Infected shove direction.
+- Fix Common Infected shove immunity on landing.
 - Fix Jockey insta attack after failed leap.
 - Fix Special Infected insta attack after shove.
 - Fix friendly fire while Charger carries survivor.
@@ -55,7 +56,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.2.3"
+#define VERSION "31.3.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -107,6 +108,7 @@ static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDE
 #endif
 
 Handle g_hspawn_timer;
+Handle g_hhr_istankinplay;
 int g_alive_survivors;
 int g_si_limit;
 int g_si_recently_killed[SI_TYPES];
@@ -116,15 +118,29 @@ int g_si_recently_killed[SI_TYPES];
 // Damage mod
 Handle g_hweapon_trie;
 
-// Only used internaly.
-Handle g_hhr_istankinplay;
-
 // Is MaxedOut mod active? If not Normal mod will be active.
 bool g_is_maxedout;
 
 // For firebulletsfix.
 Handle g_hweapon_shoot_position;
 float g_old_weapon_shoot_position[L4D2_MAXPLAYERS + 1][3];
+
+// For common infected shove immunity on landing fix.
+//
+
+// Source: left4dhooks_anim
+enum
+{
+	L4D2_ACT_TERROR_JUMP_LANDING = 662,
+	L4D2_ACT_TERROR_JUMP_LANDING_HARD,
+	L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
+	L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL
+};
+
+Handle g_hmy_next_bot_pointer;
+Handle g_hget_body_interface;
+
+//
 
 // Special infected insta attack after shove fix.
 // Jockey insta attack after failed leap fix.
@@ -154,10 +170,22 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
+	Handle game_data = LoadGameConfigFile("l4d2_hard_realism");
+	
 	// For firebulletsfix.
-	Handle hgame_data = LoadGameConfigFile("firebulletsfix.l4d2");
-	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(hgame_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
-	CloseHandle(hgame_data);
+	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
+	
+	// For common infected shove immunity on landing fix.
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "CBaseEntity::MyNextBotPointer");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hmy_next_bot_pointer = EndPrepSDKCall();
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "INextBot::GetBodyInterface");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hget_body_interface = EndPrepSDKCall();
+	
+	CloseHandle(game_data);
 
 	// Map modded damage.
 	g_hweapon_trie = CreateTrie();
@@ -187,6 +215,7 @@ public void OnPluginStart()
 	RegConsoleCmd("hr_getmod", command_hr_getmod);
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
+	// Only used internaly.
 	g_hhr_istankinplay = CreateConVar("hr_istankinplay", "0");
 }
 
@@ -708,13 +737,43 @@ MRESReturn on_weapon_shoot_position(int pThis, DHookReturn hReturn)
 
 public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 {
-	// For common infected shove direction fix.
-	if (!strcmp(name, "InfectedShoved"))
+	if (!strcmp(name, "InfectedShoved")) {
+		
+		// For common infected shove immunity on landing fix.
+		__action_setlistener(action, __action_processor_OnStart, infected_shoved_on_start, false);
+		
+		// For common infected shove direction fix.
 		__action_setlistener(action, __action_processor_OnShoved, infected_shoved_on_shoved, false);
+
+	}
 	
 	// For jockey insta attack after failed leap fix.
 	else if (!strcmp(name, "JockeyAttack"))
 		__action_setlistener(action, __action_processor_OnResume, jockey_attack_on_resume, true);
+}
+
+// Common infected shove immunity on landing fix.
+// Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
+Action infected_shoved_on_start(any action, int actor, any priorAction, ActionResult result)
+{
+	Address body_interface = SDKCall(g_hget_body_interface, SDKCall(g_hmy_next_bot_pointer, actor));
+
+	// Get m_activity and check for landing.
+	switch (LoadFromAddress(body_interface + view_as<Address>(80), NumberType_Int32)) {
+		case L4D2_ACT_TERROR_JUMP_LANDING, L4D2_ACT_TERROR_JUMP_LANDING_HARD, L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL, L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
+
+			#if DEBUG_SHOVE
+			PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING _");
+			#endif
+
+			// Get m_activityType and clear ACTIVITY_UNINTERRUPTIBLE flag.
+			Address activity_type = body_interface + view_as<Address>(84);
+			StoreToAddress(activity_type, LoadFromAddress(activity_type, NumberType_Int32) & ~4, NumberType_Int32, false);
+
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 // Common infected shove direction fix.
