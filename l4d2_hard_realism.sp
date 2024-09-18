@@ -56,7 +56,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.3.0"
+#define VERSION "31.3.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -70,11 +70,11 @@ Version 31
 #define DEBUG_SPITTER 0
 
 // From command "maxplayers".
-// "maxplayers" is "18"
-// "mininum_maxplayers" is "18"
-// "absolute_maxplayers" is "18"
-// "default_maxplayers" is "18"
 #define L4D2_MAXPLAYERS 18
+
+// Minimum and maximum number of alive special infected.
+#define MIN_SI 3
+#define MAX_SI 5
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -94,35 +94,35 @@ Version 31
 
 // Special infected types (for indexing).
 // Keep the same order as zombie classes.
-#define SI_TYPES 6
-#define SI_INDEX_SMOKER 0
-#define SI_INDEX_BOOMER 1
-#define SI_INDEX_HUNTER 2
-#define SI_INDEX_SPITTER 3
-#define SI_INDEX_JOCKEY 4
-#define SI_INDEX_CHARGER 5
+#define ZOMBIE_INDEX_SMOKER 0
+#define ZOMBIE_INDEX_BOOMER 1
+#define ZOMBIE_INDEX_HUNTER 2
+#define ZOMBIE_INDEX_SPITTER 3
+#define ZOMBIE_INDEX_JOCKEY 4
+#define ZOMBIE_INDEX_CHARGER 5
+#define ZOMBIE_INDEX_SIZE 6
 
 #if (DEBUG_SI_SPAWN || DEBUG_SHOVE || DEBUG_JOCKEY)
 // Keep the same order as zombie classes.
-static const char g_debug_si_indexes[SI_TYPES][] = { "SI_INDEX_SMOKER", "SI_INDEX_BOOMER", "SI_INDEX_HUNTER", "SI_INDEX_SPITTER", "SI_INDEX_JOCKEY", "SI_INDEX_CHARGER" };
+static const char g_debug_si_indexes[ZOMBIE_INDEX_SIZE][] = { "ZOMBIE_INDEX_SMOKER", "ZOMBIE_INDEX_BOOMER", "ZOMBIE_INDEX_HUNTER", "ZOMBIE_INDEX_SPITTER", "ZOMBIE_INDEX_JOCKEY", "ZOMBIE_INDEX_CHARGER" };
 #endif
 
-Handle g_hspawn_timer;
-Handle g_hhr_istankinplay;
+Handle g_spawn_timer;
+Handle g_hr_istankinplay;
 int g_alive_survivors;
 int g_si_limit;
-int g_si_recently_killed[SI_TYPES];
+int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
 
 //
 
 // Damage mod
-Handle g_hweapon_trie;
+Handle g_weapon_trie;
 
 // Is MaxedOut mod active? If not Normal mod will be active.
 bool g_is_maxedout;
 
 // For firebulletsfix.
-Handle g_hweapon_shoot_position;
+Handle g_weapon_shoot_position;
 float g_old_weapon_shoot_position[L4D2_MAXPLAYERS + 1][3];
 
 // For common infected shove immunity on landing fix.
@@ -137,8 +137,8 @@ enum
 	L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL
 };
 
-Handle g_hmy_next_bot_pointer;
-Handle g_hget_body_interface;
+Handle g_my_next_bot_pointer;
+Handle g_get_body_interface;
 
 //
 
@@ -149,11 +149,11 @@ Handle g_hget_body_interface;
 enum struct Clear_in_attack2_timer
 {
 	int userid;
-	Handle htimer;
+	Handle timer;
 }
 
 // Set array size to the max possible special infected limit.
-Clear_in_attack2_timer g_clear_in_attack2_timers[5];
+Clear_in_attack2_timer g_clear_in_attack2_timers[MAX_SI];
 
 //
 
@@ -170,29 +170,29 @@ public Plugin myinfo = {
 
 public void OnPluginStart()
 {
-	Handle game_data = LoadGameConfigFile("l4d2_hard_realism");
+	Handle gamedata = LoadGameConfigFile("l4d2_hard_realism");
 	
 	// For firebulletsfix.
-	g_hweapon_shoot_position = DHookCreate(GameConfGetOffset(game_data, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
+	g_weapon_shoot_position = DHookCreate(GameConfGetOffset(gamedata, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
 	
 	// For common infected shove immunity on landing fix.
 	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "CBaseEntity::MyNextBotPointer");
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "CBaseEntity::MyNextBotPointer");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hmy_next_bot_pointer = EndPrepSDKCall();
+	g_my_next_bot_pointer = EndPrepSDKCall();
 	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(game_data, SDKConf_Virtual, "INextBot::GetBodyInterface");
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "INextBot::GetBodyInterface");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hget_body_interface = EndPrepSDKCall();
+	g_get_body_interface = EndPrepSDKCall();
 	
-	CloseHandle(game_data);
+	CloseHandle(gamedata);
 
 	// Map modded damage.
-	g_hweapon_trie = CreateTrie();
-	SetTrieValue(g_hweapon_trie, "weapon_hunting_rifle", 38.0);
-	SetTrieValue(g_hweapon_trie, "weapon_sniper_military", 38.0);
-	SetTrieValue(g_hweapon_trie, "weapon_sniper_scout", 76.0);
-	SetTrieValue(g_hweapon_trie, "weapon_sniper_awp", 152.0);
+	g_weapon_trie = CreateTrie();
+	SetTrieValue(g_weapon_trie, "weapon_hunting_rifle", 38.0);
+	SetTrieValue(g_weapon_trie, "weapon_sniper_military", 38.0);
+	SetTrieValue(g_weapon_trie, "weapon_sniper_scout", 76.0);
+	SetTrieValue(g_weapon_trie, "weapon_sniper_awp", 152.0);
 
 	// Hook game events.
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
@@ -216,7 +216,7 @@ public void OnPluginStart()
 	RegConsoleCmd("hr_switchmod", command_hr_switchmod);
 	
 	// Only used internaly.
-	g_hhr_istankinplay = CreateConVar("hr_istankinplay", "0");
+	g_hr_istankinplay = CreateConVar("hr_istankinplay", "0");
 }
 
 public void OnConfigsExecuted()
@@ -289,7 +289,7 @@ Action command_hr_switchmod(int client, int args)
 	g_is_maxedout = !g_is_maxedout;
 	if (g_is_maxedout) {
 		g_alive_survivors = 4;
-		g_si_limit = 5;
+		g_si_limit = MAX_SI;
 		PrintToChatAll("[HR] MaxedOut mod is activated by %N.", client);
 	}
 	else { // Normal mod.
@@ -316,7 +316,7 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
 		// Get modded damage.
-		if (GetTrieValue(g_hweapon_trie, classname, damage)) {
+		if (GetTrieValue(g_weapon_trie, classname, damage)) {
 		
 			#if DEBUG_DAMAGE_MOD
 			debug_on_take_damage(victim, attacker, inflictor, damage);
@@ -344,10 +344,9 @@ void event_player_spawn(Event event, const char[] name, bool dontBroadcast)
 		SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_survivor);
 
 		if (!g_is_maxedout) {
-			
+
 			// Count on the next frame, fixes miscount on idle.
 			RequestFrame(count_alive_survivors);
-		
 		}
 	}	
 }
@@ -383,28 +382,28 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 			const float delay = 4.0;
 			switch (GetEntProp(client, Prop_Send, "m_zombieClass")) {
 				case ZOMBIE_CLASS_SMOKER: {
-					++g_si_recently_killed[SI_INDEX_SMOKER];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_SMOKER, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_SMOKER];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_SMOKER, TIMER_FLAG_NO_MAPCHANGE);
 				}
 				case ZOMBIE_CLASS_BOOMER: {
-					++g_si_recently_killed[SI_INDEX_BOOMER];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_BOOMER, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_BOOMER];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_BOOMER, TIMER_FLAG_NO_MAPCHANGE);
 				}
 				case ZOMBIE_CLASS_HUNTER: {
-					++g_si_recently_killed[SI_INDEX_HUNTER];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_HUNTER, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_HUNTER];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_HUNTER, TIMER_FLAG_NO_MAPCHANGE);
 				}
 				case ZOMBIE_CLASS_SPITTER: {
-					++g_si_recently_killed[SI_INDEX_SPITTER];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_SPITTER, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_SPITTER];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_SPITTER, TIMER_FLAG_NO_MAPCHANGE);
 				}
 				case ZOMBIE_CLASS_JOCKEY: {
-					++g_si_recently_killed[SI_INDEX_JOCKEY];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_JOCKEY, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_JOCKEY];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_JOCKEY, TIMER_FLAG_NO_MAPCHANGE);
 				}
 				case ZOMBIE_CLASS_CHARGER: {
-					++g_si_recently_killed[SI_INDEX_CHARGER];
-					CreateTimer(delay, clear_recently_killed, SI_INDEX_CHARGER, TIMER_FLAG_NO_MAPCHANGE);
+					++g_si_recently_killed[ZOMBIE_INDEX_CHARGER];
+					CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_CHARGER, TIMER_FLAG_NO_MAPCHANGE);
 				}
 			}
 		}
@@ -430,7 +429,8 @@ void count_alive_survivors()
 	PrintToChatAll("[HR] count_alive_survivors(): (BEFORE CLAMP!) g_alive_survivors = %i", g_alive_survivors);
 	#endif
 
-	g_alive_survivors = clamp(g_alive_survivors, 2, 4);
+	// Clamp to max 4 and min 2.
+	g_alive_survivors = g_alive_survivors > 4 ? 4 : (g_alive_survivors < 2 ? 2 : g_alive_survivors);
 	
 	// Setting g_si_limit here is convinient.
 	g_si_limit = g_alive_survivors + 1;
@@ -455,7 +455,7 @@ void start_spawn_timer()
 	float interval = 17.0;
 	if (!g_is_maxedout)
 		interval = GetRandomFloat(17.0, 38.0) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
-	g_hspawn_timer = CreateTimer(interval, auto_spawn_si);
+	g_spawn_timer = CreateTimer(interval, auto_spawn_si);
 
 	#if DEBUG_SI_SPAWN
 	PrintToChatAll("[HR] start_spawn_timer(): interval = %.2f", interval);
@@ -465,33 +465,33 @@ void start_spawn_timer()
 void auto_spawn_si(Handle timer)
 {
 	// Count special infected.
-	int si_type_counts[SI_TYPES];
+	int si_type_counts[ZOMBIE_INDEX_SIZE];
 	int si_total_count;
 	for (int i = 1; i <= MaxClients; ++i) {
 		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED && IsPlayerAlive(i)) {
 			switch (GetEntProp(i, Prop_Send, "m_zombieClass")) {
 				case ZOMBIE_CLASS_SMOKER: {
-					++si_type_counts[SI_INDEX_SMOKER];
+					++si_type_counts[ZOMBIE_INDEX_SMOKER];
 					++si_total_count;
 				}
 				case ZOMBIE_CLASS_BOOMER: {
-					++si_type_counts[SI_INDEX_BOOMER];
+					++si_type_counts[ZOMBIE_INDEX_BOOMER];
 					++si_total_count;
 				}
 				case ZOMBIE_CLASS_HUNTER: {
-					++si_type_counts[SI_INDEX_HUNTER];
+					++si_type_counts[ZOMBIE_INDEX_HUNTER];
 					++si_total_count;
 				}
 				case ZOMBIE_CLASS_SPITTER: {
-					++si_type_counts[SI_INDEX_SPITTER];
+					++si_type_counts[ZOMBIE_INDEX_SPITTER];
 					++si_total_count;
 				}
 				case ZOMBIE_CLASS_JOCKEY: {
-					++si_type_counts[SI_INDEX_JOCKEY];
+					++si_type_counts[ZOMBIE_INDEX_JOCKEY];
 					++si_total_count;
 				}
 				case ZOMBIE_CLASS_CHARGER: {
-					++si_type_counts[SI_INDEX_CHARGER];
+					++si_type_counts[ZOMBIE_INDEX_CHARGER];
 					++si_total_count;
 				}
 
@@ -506,10 +506,10 @@ void auto_spawn_si(Handle timer)
 					RemoveEntity(logic);
 
 					#if DEBUG_SI_SPAWN
-					PrintToChatAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hhr_istankinplay));
+					PrintToChatAll("[HR] auto_spawn_si(): hr_istankinplay = %i", GetConVarInt(g_hr_istankinplay));
 					#endif
 
-					if (GetConVarBool(g_hhr_istankinplay))
+					if (GetConVarBool(g_hr_istankinplay))
 						++si_total_count;
 				}
 
@@ -522,25 +522,25 @@ void auto_spawn_si(Handle timer)
 		
 		// Set spawn size.
 		int size = g_si_limit - si_total_count;
-		if (!g_is_maxedout && size > 3)
-			size = GetRandomInt(3, size);
+		if (!g_is_maxedout && size > MIN_SI)
+			size = GetRandomInt(MIN_SI, size);
 
 		#if DEBUG_SI_SPAWN
 		PrintToChatAll("[HR] auto_spawn_si(): g_si_limit = %i; si_total_count = %i; size = %i", g_si_limit, si_total_count, size);
 		#endif
 
 		// Keep the same order as zombie classes.
-		static const int si_spawn_limits[SI_TYPES] = { 2, 1, 2, 1, 2, 2 };
-		static const int si_spawn_weights[SI_TYPES] = { 60, 100, 60, 100, 60, 60 };
-		static const float si_spawn_weight_mods[SI_TYPES] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
+		static const int si_spawn_limits[ZOMBIE_INDEX_SIZE] = { 2, 1, 2, 1, 2, 2 };
+		static const int si_spawn_weights[ZOMBIE_INDEX_SIZE] = { 60, 100, 60, 100, 60, 60 };
+		static const float si_spawn_weight_mods[ZOMBIE_INDEX_SIZE] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
-		int tmp_weights[SI_TYPES];
+		int tmp_weights[ZOMBIE_INDEX_SIZE];
 		float delay;
 		while (size) {
 
 			// Calculate temporary weights and their weight sum, including reductions.
 			int tmp_wsum;
-			for (int i = 0; i < SI_TYPES; ++i) {
+			for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i) {
 				if (si_type_counts[i] < si_spawn_limits[i]) {
 					tmp_weights[i] = si_spawn_weights[i];
 					int tmp_count = si_type_counts[i];
@@ -555,7 +555,7 @@ void auto_spawn_si(Handle timer)
 			}
 
 			#if DEBUG_SI_SPAWN
-			for (int i = 0; i < SI_TYPES; ++i)
+			for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i)
 				PrintToChatAll("[HR] auto_spawn_si(): tmp_weights[%s] = %i", g_debug_si_indexes[i], tmp_weights[i]);
 			#endif
 
@@ -567,7 +567,7 @@ void auto_spawn_si(Handle timer)
 
 			// Cycle trough weight ranges, find where the random index falls and pick an appropriate array index.
 			int range;
-			for (int i = 0; i < SI_TYPES; ++i) {
+			for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i) {
 				range += tmp_weights[i];
 				if (index <= range) {
 					index = i;
@@ -611,8 +611,18 @@ void fake_z_spawn_old(Handle timer, int data)
 		return;
 	}
 
-	int client = get_random_alive_survivor();
+	// Get all alive survivors.
+	int[] clients = new int[MaxClients];
+	int client;
+	for (int i = 1; i <= MaxClients; ++i)
+		if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i))
+			clients[client++] = i; // We can't know who's last, so index will overflow!
+	
+	// If we have any alive survivors.
 	if (client) {
+
+		// Get random alive survivor.
+		client = clients[GetRandomInt(0, client - 1)];
 		
 		// Create infected bot.
 		// Without this we may not be able to spawn our special infected.
@@ -629,7 +639,7 @@ void fake_z_spawn_old(Handle timer, int data)
 		SetCommandFlags(z_spawn_old, flags & ~FCVAR_CHEAT);
 
 		// Keep the same order as zombie classes.
-		static const char z_spawns[SI_TYPES][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
+		static const char z_spawns[ZOMBIE_INDEX_SIZE][] = { "z_spawn_old smoker auto", "z_spawn_old boomer auto", "z_spawn_old hunter auto", "z_spawn_old spitter auto", "z_spawn_old jockey auto", "z_spawn_old charger auto" };
 
 		FakeClientCommand(client, z_spawns[data]);
 
@@ -643,7 +653,6 @@ void fake_z_spawn_old(Handle timer, int data)
 		// Kick the bot.
 		if (bot && IsClientConnected(bot))
 			KickClient(bot);
-
 	}
 }
 
@@ -684,7 +693,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
-	if (!strcmp(classname, "weapon_melee") && !is_zero(damage)) {
+	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
 		damage = 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
@@ -710,7 +719,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 public void OnClientPutInServer(int client)
 {
 	if (!IsFakeClient(client))
-		DHookEntity(g_hweapon_shoot_position, true, client);
+		DHookEntity(g_weapon_shoot_position, true, client);
 }
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
@@ -744,7 +753,6 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		
 		// For common infected shove direction fix.
 		__action_setlistener(action, __action_processor_OnShoved, infected_shoved_on_shoved, false);
-
 	}
 	
 	// For jockey insta attack after failed leap fix.
@@ -756,11 +764,15 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 // Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
 Action infected_shoved_on_start(any action, int actor, any priorAction, ActionResult result)
 {
-	Address body_interface = SDKCall(g_hget_body_interface, SDKCall(g_hmy_next_bot_pointer, actor));
+	Address body_interface = SDKCall(g_get_body_interface, SDKCall(g_my_next_bot_pointer, actor));
 
 	// Get m_activity and check for landing.
 	switch (LoadFromAddress(body_interface + view_as<Address>(80), NumberType_Int32)) {
-		case L4D2_ACT_TERROR_JUMP_LANDING, L4D2_ACT_TERROR_JUMP_LANDING_HARD, L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL, L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
+		case
+			L4D2_ACT_TERROR_JUMP_LANDING,
+			L4D2_ACT_TERROR_JUMP_LANDING_HARD,
+			L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
+			L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
 
 			#if DEBUG_SHOVE
 			PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING _");
@@ -769,7 +781,6 @@ Action infected_shoved_on_start(any action, int actor, any priorAction, ActionRe
 			// Get m_activityType and clear ACTIVITY_UNINTERRUPTIBLE flag.
 			Address activity_type = body_interface + view_as<Address>(84);
 			StoreToAddress(activity_type, LoadFromAddress(activity_type, NumberType_Int32) & ~4, NumberType_Int32, false);
-
 		}
 	}
 
@@ -810,7 +821,7 @@ Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionRes
 	const float delay = 0.2;
 
 	// We already have a timer?
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < MAX_SI; ++i)
 		if (g_clear_in_attack2_timers[i].userid == userid) {
 
 			#if DEBUG_JOCKEY
@@ -821,10 +832,10 @@ Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionRes
 		}
 
 	// We don't have a timer.
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < MAX_SI; ++i)
 		if (!g_clear_in_attack2_timers[i].userid) {
 			g_clear_in_attack2_timers[i].userid = userid;
-			g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+			g_clear_in_attack2_timers[i].timer = CreateTimer(delay, clear_in_attack2, i);
 			return Plugin_Continue;
 		}
 
@@ -862,18 +873,18 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			const float delay = 1.5;
 
 			// Are we reshoving or we already have timer?
-			for (int i = 0; i < 5; ++i)
+			for (int i = 0; i < MAX_SI; ++i)
 				if (g_clear_in_attack2_timers[i].userid == userid) {
-					delete g_clear_in_attack2_timers[i].htimer;
-					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+					delete g_clear_in_attack2_timers[i].timer;
+					g_clear_in_attack2_timers[i].timer = CreateTimer(delay, clear_in_attack2, i);
 					return;
 				}
 
 			// Shoving for the first time.
-			for (int i = 0; i < 5; ++i)
+			for (int i = 0; i < MAX_SI; ++i)
 				if (!g_clear_in_attack2_timers[i].userid) {
 					g_clear_in_attack2_timers[i].userid = userid;
-					g_clear_in_attack2_timers[i].htimer = CreateTimer(delay, clear_in_attack2, i);
+					g_clear_in_attack2_timers[i].timer = CreateTimer(delay, clear_in_attack2, i);
 					return;
 				}
 
@@ -882,7 +893,6 @@ void event_player_shoved(Event event, const char[] name, bool dontBroadcast)
 			#endif
 
 			//
-
 		}
 	}
 }
@@ -903,7 +913,7 @@ void clear_in_attack2(Handle timer, int data)
 		SetEntProp(client, Prop_Data, m_afButtonDisabled, GetEntProp(client, Prop_Data, m_afButtonDisabled) & ~IN_ATTACK2);
 	}
 	g_clear_in_attack2_timers[data].userid = 0;
-	g_clear_in_attack2_timers[data].htimer = null;
+	g_clear_in_attack2_timers[data].timer = null;
 }
 
 // Friendly fire while Charger carries survivor fix.
@@ -935,8 +945,7 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
 		PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %N, victim = %N", attacker, victim);
 		#endif
 
-		damage = 0.0;
-		return Plugin_Changed;
+		return Plugin_Handled;
 	}
 	return Plugin_Continue;
 }
@@ -987,9 +996,7 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
 				RemoveEntity(logic);
 
 				//
-
 			}
-
 		}
 	}
 }
@@ -1002,6 +1009,10 @@ void event_spit_burst(Event event, const char[] name, bool dontBroadcast)
 	#endif
 
 	if (IsValidEntity(g_spitter_projectile)) {
+
+		// Run VScript code.
+		//
+
 		int logic = CreateEntityByName("logic_script");
 		DispatchSpawn(logic);
 		char buffer[280];
@@ -1012,6 +1023,8 @@ void event_spit_burst(Event event, const char[] name, bool dontBroadcast)
 		SetVariantString(buffer);
 		AcceptEntityInput(logic, "RunScriptCode");
 		RemoveEntity(logic);
+
+		//
 	}
 
 	#if DEBUG_SPITTER
@@ -1032,12 +1045,12 @@ public void OnMapEnd()
 
 void on_end()
 {
-	delete g_hspawn_timer;
-	for (int i = 0; i < 5; ++i) {
+	delete g_spawn_timer;
+	for (int i = 0; i < MAX_SI; ++i) {
 		g_clear_in_attack2_timers[i].userid = 0;
-		delete g_clear_in_attack2_timers[i].htimer;
+		delete g_clear_in_attack2_timers[i].timer;
 	}
-	for (int i = 0; i < SI_TYPES; ++i)
+	for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i)
 		g_si_recently_killed[i] = 0;
 }
 
@@ -1062,35 +1075,3 @@ void debug_on_take_damage(int victim, int attacker, int inflictor, float damage)
 	}
 }
 #endif
-
-// Extra stock functions
-//
-
-/*
-Returns client of random alive survivor or 0 if there are no alive survivors.
-*/
-stock int get_random_alive_survivor()
-{
-	int[] clients = new int[MaxClients];
-	int index;
-	for (int i = 1; i <= MaxClients; ++i)
-		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-			clients[index++] = i; // We can't know who's last, so index will overflow!
-	return index ? clients[GetRandomInt(0, index - 1)] : 0;
-}
-
-/*
-Returns clamped val between min and max.
-*/
-stock int clamp(int val, int min, int max)
-{
-	return val > max ? max : (val < min ? min : val);
-}
-
-/*
-Safe check is float val zero.
-*/
-stock bool is_zero(float val)
-{
-	return FloatAbs(val) < 0.000001;
-}

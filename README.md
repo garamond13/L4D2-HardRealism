@@ -26,6 +26,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 31.3.1
+- Micro optimizations.
+- Code edits.
+
 Version 31.3.0
 - Fix Common Infected shove immunity on landing.
 - Switch to new gamedata.
