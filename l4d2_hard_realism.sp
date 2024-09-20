@@ -1,11 +1,10 @@
 /*
 IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
-Version description
+Brief description
 
-Special Infected (SI) order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
+*Special Infected (SI) order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
 
-Version 31
 - Normal (default) mod and MaxedOut mod.
 - Get active mode with hr_getmod command.
 - Switch between mods with hr_switchmod command.
