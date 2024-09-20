@@ -26,6 +26,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 32.0.0
+- Halve damage from crouched Common/Uncommon Infected.
+- Update gamedata.
+
 Version 31.3.1
 - Micro optimizations.
 - Code edits.

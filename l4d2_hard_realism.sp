@@ -26,6 +26,7 @@ Version 31
 - Set Jockey leap range to 150.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors (Normal mod).
+- Halve damage from crouched Common/Uncommon Infected.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
 - Set Military Sniper damage against Common/Uncommon Infected to 38.
@@ -56,7 +57,7 @@ Version 31
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "31.3.1"
+#define VERSION "32.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -68,6 +69,7 @@ Version 31
 #define DEBUG_FIREBULLETSFIX 0
 #define DEBUG_JOCKEY 0
 #define DEBUG_SPITTER 0
+#define DEBUG_POSTURE 0
 
 // From command "maxplayers".
 #define L4D2_MAXPLAYERS 18
@@ -117,6 +119,8 @@ int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
 
 // Damage mod
 Handle g_weapon_trie;
+
+Handle g_get_actual_posture;
 
 // Is MaxedOut mod active? If not Normal mod will be active.
 bool g_is_maxedout;
@@ -173,18 +177,27 @@ public void OnPluginStart()
 	Handle gamedata = LoadGameConfigFile("l4d2_hard_realism");
 	
 	// For firebulletsfix.
-	g_weapon_shoot_position = DHookCreate(GameConfGetOffset(gamedata, "Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
-	
-	// For common infected shove immunity on landing fix.
+	// Vector CBasePlayer::Weapon_ShootPosition()
+	g_weapon_shoot_position = DHookCreate(GameConfGetOffset(gamedata, "CBasePlayer::Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
+
+	// INextBot* CBaseEntity::MyNextBotPointer()
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "CBaseEntity::MyNextBotPointer");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_my_next_bot_pointer = EndPrepSDKCall();
+	
+	// IBody* INextBot::GetBodyInterface()
 	StartPrepSDKCall(SDKCall_Raw);
 	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "INextBot::GetBodyInterface");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_get_body_interface = EndPrepSDKCall();
-	
+
+	// PostureType IBody::GetActualPosture()
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "IBody::GetActualPosture");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_get_actual_posture = EndPrepSDKCall();
+
 	CloseHandle(gamedata);
 
 	// Map modded damage.
@@ -362,6 +375,26 @@ Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float&
 		#endif
 
 		return Plugin_Changed;
+	}
+
+	// Crouched commons damage to survivors
+	else {
+		char classname[12];
+		GetEntityClassname(attacker, classname, sizeof(classname));
+		if (!strcmp(classname, "infected")) {
+
+			#if DEBUG_POSTURE
+			static const char posture_type[][] = { "STAND", "CROUCH", "SIT", "CRAWL", "LIE" };
+			int actual_posture = SDKCall(g_get_actual_posture, SDKCall(g_get_body_interface, SDKCall(g_my_next_bot_pointer, attacker)));
+			PrintToChatAll("[HR] on_take_damage_survivor(): actual_posture = %s", posture_type[actual_posture]);
+			#endif
+
+			// If actual posture is PostureType::CROUCH
+			if (SDKCall(g_get_actual_posture, SDKCall(g_get_body_interface, SDKCall(g_my_next_bot_pointer, attacker))) == 1) {
+				damage *= 0.5;
+				return Plugin_Changed;
+			}
+		}
 	}
 	
 	#if DEBUG_DAMAGE_MOD

@@ -4,7 +4,7 @@
 	{
 		"Offsets"
 		{
-			"Weapon_ShootPosition"
+			"CBasePlayer::Weapon_ShootPosition"
 			{
 				"windows" "285"
 				"linux" "286"
@@ -20,6 +20,12 @@
 			{
 				"windows" "48"
 				"linux" "49"
+			}
+
+			"IBody::GetActualPosture"
+			{
+				"windows" "62"
+				"linux" "63"
 			}
 		}
 	}
