@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "32.0.0"
+#define VERSION "32.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -153,16 +153,17 @@ public void OnPluginStart()
 
 	// Map modded damage.
 	g_weapon_trie = CreateTrie();
-	SetTrieValue(g_weapon_trie, "weapon_hunting_rifle", 38.0);
-	SetTrieValue(g_weapon_trie, "weapon_sniper_military", 38.0);
-	SetTrieValue(g_weapon_trie, "weapon_sniper_scout", 76.0);
-	SetTrieValue(g_weapon_trie, "weapon_sniper_awp", 152.0);
+	SetTrieValue(g_weapon_trie, "hunting_rifle", 38.0);
+	SetTrieValue(g_weapon_trie, "sniper_military", 38.0);
+	SetTrieValue(g_weapon_trie, "sniper_scout", 76.0);
+	SetTrieValue(g_weapon_trie, "sniper_awp", 152.0);
 
 	// Hook game events.
 	HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", event_player_spawn);
 	HookEvent("player_death", event_player_death);
 	HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
+	HookEvent("weapon_reload", event_weapon_reload);
 	HookEvent("player_shoved", event_player_shoved);
 	HookEvent("charger_carry_start", event_charger_carry_start);
 	HookEvent("charger_carry_end", event_charger_carry_end);
@@ -276,11 +277,13 @@ public void OnEntityCreated(int entity, const char[] classname)
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	if (attacker == inflictor && attacker > 0 && attacker <= MaxClients) {
+		
+		// The classname will have prefix weapon_
 		char classname[24];
 		GetClientWeapon(attacker, classname, sizeof(classname));
 
 		// Get modded damage.
-		if (GetTrieValue(g_weapon_trie, classname, damage)) {
+		if (GetTrieValue(g_weapon_trie, classname[7], damage)) {
 		
 			#if DEBUG_DAMAGE_MOD
 			debug_on_take_damage(victim, attacker, inflictor, damage);
@@ -724,6 +727,125 @@ MRESReturn on_weapon_shoot_position(int pThis, DHookReturn hReturn)
 
 	DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
 	return MRES_Supercede;
+}
+
+//
+
+// Weapon reload fix
+//
+
+void event_weapon_reload(Event event, const char[] name, bool dontBroadcast)
+{
+	int userid = GetEventInt(event, "userid");
+	int weapon = GetEntPropEnt(GetClientOfUserId(userid), Prop_Data, "m_hActiveWeapon");
+	
+	// The classname will have prefix weapon_
+	char weapon_name[24];
+	GetEntityClassname(weapon, weapon_name, sizeof(weapon_name));
+	
+	if (!strcmp(weapon_name[7], "pistol")) {
+		if (GetEntProp(weapon, Prop_Send, "m_isDualWielding")) {
+			if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0)
+				set_pistol_ammo_timer(1.8, weapon, 30, userid);
+			else
+				set_pistol_ammo_timer(2.1, weapon, 30, userid);
+		}
+		else {
+			if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0)
+				set_pistol_ammo_timer(1.2, weapon, 15, userid);
+			else
+				set_pistol_ammo_timer(1.5, weapon, 15, userid);
+		}
+	}
+	else if (!strcmp(weapon_name[7], "pistol_magnum")) {
+		if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0)
+			set_pistol_ammo_timer(1.2, weapon, 8, userid);
+		else
+			set_pistol_ammo_timer(1.5, weapon, 8, userid);
+	}
+	else if (!strcmp(weapon_name[7], "smg") || !strcmp(weapon_name[7], "smg_silenced"))
+		set_ammo_timer(1.6, weapon, 50, userid);
+	else if (!strcmp(weapon_name[7], "smg_mp5"))
+		set_ammo_timer(2.4, weapon, 50, userid);
+	else if (!strcmp(weapon_name[7], "rifle"))
+		set_ammo_timer(1.6, weapon, 50, userid);
+	else if (!strcmp(weapon_name[7], "rifle_ak47"))
+		set_ammo_timer(1.8, weapon, 40, userid);
+	else if (!strcmp(weapon_name[7], "rifle_desert"))
+		set_ammo_timer(2.5, weapon, 60, userid);
+	else if (!strcmp(weapon_name[7], "rifle_sg552"))
+		set_ammo_timer(2.6, weapon, 50, userid);
+	else if (!strcmp(weapon_name[7], "hunting_rifle"))
+		set_ammo_timer(2.5, weapon, 15, userid);
+	else if (!strcmp(weapon_name[7], "sniper_military"))
+		set_ammo_timer(2.5, weapon, 30, userid);
+	else if (!strcmp(weapon_name[7], "sniper_scout"))
+		set_ammo_timer(2.4, weapon, 15, userid);
+	else if (!strcmp(weapon_name[7], "sniper_awp"))
+		set_ammo_timer(3.3, weapon, 20, userid);
+	else if (!strcmp(weapon_name[7], "grenade_launcher"))
+		set_ammo_timer(3.0, weapon, 1, userid);
+}
+
+void set_ammo_timer(float time, int weapon, int clip_max, int userid)
+{
+	Handle pack;
+	CreateDataTimer(time, set_ammo, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, weapon);
+	WritePackCell(pack, clip_max);
+	WritePackCell(pack, userid);
+}
+
+void set_pistol_ammo_timer(float time, int weapon, int clip_max, int userid)
+{
+	Handle pack;
+	CreateDataTimer(time, set_pistol_ammo, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, weapon);
+	WritePackCell(pack, clip_max);
+	WritePackCell(pack, userid);
+}
+
+void set_ammo(Handle tiemr, Handle data)
+{
+	// Unpack data.
+	ResetPack(data);
+	int weapon = ReadPackCell(data);
+	int clip_max = ReadPackCell(data);
+	int client = GetClientOfUserId(ReadPackCell(data));
+
+	if (client && IsValidEntity(weapon)) {
+		if (GetEntProp(weapon, Prop_Data, "m_bInReload") && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon) {
+			int primary_ammo_type = GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType");
+			int ammo = GetEntProp(client, Prop_Data, "m_iAmmo", 4, primary_ammo_type);
+			int clip = GetEntProp(weapon, Prop_Data, "m_iClip1");
+			int clip_to_max = clip_max - clip;
+
+			// Set clip ammo.
+			if (ammo + clip > clip_max)
+				SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
+			else
+				SetEntProp(weapon, Prop_Data, "m_iClip1", ammo + clip);
+		
+			// Set total ammo.
+			if (ammo > clip_to_max)
+				SetEntProp(client, Prop_Data, "m_iAmmo", ammo - clip_to_max, 4, primary_ammo_type);
+			else
+				SetEntProp(client, Prop_Data, "m_iAmmo", 0, 4, primary_ammo_type);
+		}
+	}
+}
+
+void set_pistol_ammo(Handle tiemr, Handle data)
+{
+	// Unpack data.
+	ResetPack(data);
+	int weapon = ReadPackCell(data);
+	int clip_max = ReadPackCell(data);
+	int client = GetClientOfUserId(ReadPackCell(data));
+
+	if (client && IsValidEntity(weapon))
+		if (GetEntProp(weapon, Prop_Data, "m_bInReload") && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon)
+			SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
 }
 
 //

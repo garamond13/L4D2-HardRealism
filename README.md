@@ -41,6 +41,7 @@ Brief description:
 - Fix many IDLE exploits.
 - Fix incapacitated dizziness.
 - Fix hit registration (firebulletsfix).
+- Fix weapon reload.
 - Fix Common Infected shove direction.
 - Fix Common Infected shove immunity on landing.
 - Fix Jockey insta attack after failed leap.
@@ -67,6 +68,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 32.1.0
+- Fix weapon reload.
 
 Version 32.0.0
 - Halve damage from crouched Common/Uncommon Infected.
