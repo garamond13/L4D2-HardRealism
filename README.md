@@ -31,6 +31,7 @@ Brief description:
 - Set Jockey leap range to 150.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors (Normal mod).
+- Tank is faster while on fire.
 - Halve damage from crouched Common/Uncommon Infected.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
@@ -68,6 +69,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 33.0.0
+- Make tank faster while on fire.
+- Decrease tank HP.
 
 Version 32.1.0
 - Fix weapon reload.

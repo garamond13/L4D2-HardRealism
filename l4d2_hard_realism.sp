@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "32.1.0"
+#define VERSION "33.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -645,23 +645,25 @@ void fake_z_spawn_old(Handle timer, int data)
 
 void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
-	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	int userid = GetEventInt(event, "userid");
+	int client = GetClientOfUserId(userid);
 
-	// Tank hp on 2 alive survivors = 10447.
-	// Tank hp on 3 alive survivors = 14449.
-	// Tank hp on 4 alive survivors = 18189.
-	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.8));
+	// Tank hp on 2 alive survivors = 9228.
+	// Tank hp on 3 alive survivors = 12764.
+	// Tank hp on 4 alive survivors = 16067.
+	int tank_hp = RoundToNearest(5300.0 * Pow(float(g_alive_survivors), 0.8));
 		
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-	// Tank burn time on 2 alive survivors = 111 s (1:51 min).
-	// Tank burn time on 3 alive survivors = 154 s (2:34 min).
-	// Tank burn time on 4 alive survivors = 193 s (3:13 min).
+	// Tank burn time on 2 alive survivors = 98 s (1:38 min).
+	// Tank burn time on 3 alive survivors = 136 s (2:16 min).
+	// Tank burn time on 4 alive survivors = 171 s (2:51 min).
 	// The constant factor was calculated from default values.
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
 	SDKHook(client, SDKHook_OnTakeDamage, on_take_damage_tank);
+	CreateTimer(0.2, set_tank_speed, userid, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 
 	#if DEBUG_TANK_HP
 	PrintToChatAll("[HR] event_tank_spawn(): tank hp is %i", GetEntProp(client, Prop_Data, "m_iHealth"));
@@ -697,6 +699,19 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	#endif
 
 	return Plugin_Continue;
+}
+
+Action set_tank_speed(Handle timer, int data)
+{
+	int client = GetClientOfUserId(data);
+	if (client) {
+		if (GetEntProp(client, Prop_Data, "m_fFlags") & FL_ONFIRE)
+			SetEntPropFloat(client, Prop_Send, "m_flLaggedMovementValue", 1.24); // 260 units per second
+		else
+			SetEntPropFloat(client, Prop_Send, "m_flLaggedMovementValue", 1.0);
+		return Plugin_Continue;		
+	}
+	return Plugin_Stop;
 }
 
 // firebulletsfix
