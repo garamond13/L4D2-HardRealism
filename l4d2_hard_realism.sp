@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "33.0.0"
+#define VERSION "33.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -828,25 +828,23 @@ void set_ammo(Handle tiemr, Handle data)
 	int clip_max = ReadPackCell(data);
 	int client = GetClientOfUserId(ReadPackCell(data));
 
-	if (client && IsValidEntity(weapon)) {
-		if (GetEntProp(weapon, Prop_Data, "m_bInReload") && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon) {
-			int primary_ammo_type = GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType");
-			int ammo = GetEntProp(client, Prop_Data, "m_iAmmo", 4, primary_ammo_type);
-			int clip = GetEntProp(weapon, Prop_Data, "m_iClip1");
-			int clip_to_max = clip_max - clip;
+	if (client && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon && GetEntProp(weapon, Prop_Data, "m_bInReload")) {
+		int primary_ammo_type = GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType");
+		int ammo = GetEntProp(client, Prop_Data, "m_iAmmo", 4, primary_ammo_type);
+		int clip = GetEntProp(weapon, Prop_Data, "m_iClip1");
+		int clip_to_max = clip_max - clip;
 
-			// Set clip ammo.
-			if (ammo + clip > clip_max)
-				SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
-			else
-				SetEntProp(weapon, Prop_Data, "m_iClip1", ammo + clip);
+		// Set clip ammo.
+		if (ammo + clip > clip_max)
+			SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
+		else
+			SetEntProp(weapon, Prop_Data, "m_iClip1", ammo + clip);
 		
-			// Set total ammo.
-			if (ammo > clip_to_max)
-				SetEntProp(client, Prop_Data, "m_iAmmo", ammo - clip_to_max, 4, primary_ammo_type);
-			else
-				SetEntProp(client, Prop_Data, "m_iAmmo", 0, 4, primary_ammo_type);
-		}
+		// Set total ammo.
+		if (ammo > clip_to_max)
+			SetEntProp(client, Prop_Data, "m_iAmmo", ammo - clip_to_max, 4, primary_ammo_type);
+		else
+			SetEntProp(client, Prop_Data, "m_iAmmo", 0, 4, primary_ammo_type);
 	}
 }
 
@@ -858,8 +856,7 @@ void set_pistol_ammo(Handle tiemr, Handle data)
 	int clip_max = ReadPackCell(data);
 	int client = GetClientOfUserId(ReadPackCell(data));
 
-	if (client && IsValidEntity(weapon))
-		if (GetEntProp(weapon, Prop_Data, "m_bInReload") && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon)
+	if (client && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon && GetEntProp(weapon, Prop_Data, "m_bInReload"))
 			SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
 }
 

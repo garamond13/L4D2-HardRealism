@@ -70,6 +70,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 33.0.1
+- Fix an issue with the weapon reload fix.
+
 Version 33.0.0
 - Make tank faster while on fire.
 - Decrease tank HP.
