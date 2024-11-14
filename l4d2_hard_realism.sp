@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "33.0.1"
+#define VERSION "34.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -193,6 +193,10 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_spitter_limit"), 0);
 	SetConVarInt(FindConVar("z_jockey_limit"), 0);
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
+
+	// Defaults to 300 in Versus.
+	// Defualt 50.
+	SetConVarInt(FindConVar("tongue_break_from_damage_amount"), 300);
 
 	// Workaround. It will be halved by on_take_damage().
 	// Default 5, it will be multiplied by 3 on Realsim Expert.
@@ -683,7 +687,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
 	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
-		damage = 400.0;
+		damage = GetEntProp(victim, Prop_Data, "m_fFlags") & FL_ONFIRE ? 800.0 : 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
 		debug_on_take_damage(victim, attacker, inflictor, damage);

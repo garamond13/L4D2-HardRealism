@@ -25,6 +25,7 @@ Brief description:
 - Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
 - Special Infected spawns are randomly delayed in the range [0.4s, 2.2s].
 - Always spawn wandering witches.
+- Set tongue_break_from_damage_amount to same value as in Versus.
 - Set Hunter claw damage to 20.
 - Set Jockey health to 300.
 - Set Jockey ride damage to 15.
@@ -32,6 +33,7 @@ Brief description:
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors (Normal mod).
 - Tank is faster while on fire.
+- Tank takes double melee damage while on fire.
 - Halve damage from crouched Common/Uncommon Infected.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
