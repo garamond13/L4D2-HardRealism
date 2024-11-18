@@ -72,6 +72,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 34.0.0
+- Set tongue_break_from_damage_amount to same value as in Versus.
+- Tank takes double melee damage while on fire.
+
 Version 33.0.1
 - Fix an issue with the weapon reload fix.
 
