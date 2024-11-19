@@ -34,6 +34,7 @@ Brief description:
 - Tank health is relative to the number of alive Survivors (Normal mod).
 - Tank is faster while on fire.
 - Tank takes double melee damage while on fire.
+- Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
 - Halve damage from crouched Common/Uncommon Infected.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
@@ -47,6 +48,7 @@ Brief description:
 - Fix weapon reload.
 - Fix Common Infected shove direction.
 - Fix Common Infected shove immunity on landing.
+- Fix common infected shove immunity while climbing.
 - Fix Jockey insta attack after failed leap.
 - Fix Special Infected insta attack after shove.
 - Fix friendly fire while Charger carries survivor.
