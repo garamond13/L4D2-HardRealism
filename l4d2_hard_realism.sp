@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "34.0.0"
+#define VERSION "34.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -97,6 +97,10 @@ Handle g_get_body_interface;
 
 //
 
+// For common infected shove immunity while climbing fix.
+Handle g_get_locomotion_interface;
+int g_m_ladder_offset;
+
 // Special infected insta attack after shove fix.
 // Jockey insta attack after failed leap fix.
 //
@@ -136,7 +140,7 @@ public void OnPluginStart()
 	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "CBaseEntity::MyNextBotPointer");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_my_next_bot_pointer = EndPrepSDKCall();
-	
+
 	// IBody* INextBot::GetBodyInterface()
 	StartPrepSDKCall(SDKCall_Raw);
 	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "INextBot::GetBodyInterface");
@@ -148,6 +152,14 @@ public void OnPluginStart()
 	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "IBody::GetActualPosture");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_get_actual_posture = EndPrepSDKCall();
+
+	// ZombieBotLocomotion* INextBot::GetLocomotionInterface()
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "INextBot::GetLocomotionInterface");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_get_locomotion_interface = EndPrepSDKCall();
+
+	g_m_ladder_offset = GameConfGetOffset(gamedata, "ZombieBotLocomotion::m_ladder");
 
 	CloseHandle(gamedata);
 
@@ -194,6 +206,25 @@ public void OnConfigsExecuted()
 	SetConVarInt(FindConVar("z_jockey_limit"), 0);
 	SetConVarInt(FindConVar("z_charger_limit"), 0);
 
+	char buffer[20];
+	GetCurrentMap(buffer, sizeof(buffer));
+	
+	// Set to Morning(2), to always spawn wandering witches.
+	// Unless c6m1_riverbank, we don't want wandering bride witch.
+	// Default -1.
+	static const char sv_force_time_of_day[] = "sv_force_time_of_day";
+	if (!strcmp(buffer, "c6m1_riverbank"))
+		SetConVarInt(FindConVar(sv_force_time_of_day), -1);
+	else
+		SetConVarInt(FindConVar(sv_force_time_of_day), 2);
+
+	// Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
+	static const char director_no_bosses[] = "director_no_bosses";
+	if (!strcmp(buffer, "c4m3_sugarmill_b") || !strcmp(buffer, "c4m4_milltown_b"))
+		SetConVarInt(FindConVar(director_no_bosses), 1);
+	else
+		SetConVarInt(FindConVar(director_no_bosses), 0);
+
 	// Defaults to 300 in Versus.
 	// Defualt 50.
 	SetConVarInt(FindConVar("tongue_break_from_damage_amount"), 300);
@@ -213,17 +244,6 @@ public void OnConfigsExecuted()
 
 	// Default 15.
 	SetConVarInt(FindConVar("z_charger_pound_dmg"), 20);
-
-	// Set to Morning(2), to always spawn wandering witches.
-	// Unless c6m1_riverbank, we don't want wandering bride witch.
-	// Default -1.
-	char buffer[16];
-	GetCurrentMap(buffer, sizeof(buffer));
-	static char sv_force_time_of_day[] = "sv_force_time_of_day";
-	if (!strcmp(buffer, "c6m1_riverbank"))
-		SetConVarInt(FindConVar(sv_force_time_of_day), -1);
-	else
-		SetConVarInt(FindConVar(sv_force_time_of_day), 2);
 
 	// Default 100.
 	SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
@@ -882,11 +902,15 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		__action_setlistener(action, __action_processor_OnResume, jockey_attack_on_resume, true);
 }
 
-// Common infected shove immunity on landing fix.
-// Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
 Action infected_shoved_on_start(any action, int actor, any priorAction, ActionResult result)
 {
-	Address body_interface = SDKCall(g_get_body_interface, SDKCall(g_my_next_bot_pointer, actor));
+	Address my_next_bot_pointer = SDKCall(g_my_next_bot_pointer, actor);
+	
+	// Common infected shove immunity on landing fix.
+	// Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
+	//
+
+	Address body_interface = SDKCall(g_get_body_interface, my_next_bot_pointer);
 
 	// Get m_activity and check for landing.
 	switch (LoadFromAddress(body_interface + view_as<Address>(80), NumberType_Int32)) {
@@ -897,7 +921,7 @@ Action infected_shoved_on_start(any action, int actor, any priorAction, ActionRe
 			L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
 
 			#if DEBUG_SHOVE
-			PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING _");
+			PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING");
 			#endif
 
 			// Get m_activityType and clear ACTIVITY_UNINTERRUPTIBLE flag.
@@ -905,6 +929,12 @@ Action infected_shoved_on_start(any action, int actor, any priorAction, ActionRe
 			StoreToAddress(activity_type, LoadFromAddress(activity_type, NumberType_Int32) & ~4, NumberType_Int32, false);
 		}
 	}
+
+	//
+
+	// Common infected shove immunity while climbing fix.
+	// Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
+	StoreToAddress(SDKCall(g_get_locomotion_interface, my_next_bot_pointer) + view_as<Address>(g_m_ladder_offset), Address_Null, NumberType_Int32, false);
 
 	return Plugin_Continue;
 }

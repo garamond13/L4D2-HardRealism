@@ -72,6 +72,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 34.1.0
+- Fix common infected shove immunity while climbing.
+- Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
+
 Version 34.0.0
 - Set tongue_break_from_damage_amount to same value as in Versus.
 - Tank takes double melee damage while on fire.
