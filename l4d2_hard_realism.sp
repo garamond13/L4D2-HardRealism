@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "34.1.0"
+#define VERSION "35.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -226,18 +226,18 @@ public void OnConfigsExecuted()
 		SetConVarInt(FindConVar(director_no_bosses), 0);
 
 	// Defaults to 300 in Versus.
-	// Defualt 50.
+	// Default 50.
 	SetConVarInt(FindConVar("tongue_break_from_damage_amount"), 300);
 
 	// Workaround. It will be halved by on_take_damage().
 	// Default 5, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
 
-	// Defualt 325.
-	SetConVarInt(FindConVar("z_jockey_health"), 300);
+	// Default 325.
+	SetConVarInt(FindConVar("z_jockey_health"), 250);
 
-	// Default 200.
-	SetConVarInt(FindConVar("z_jockey_leap_range"), 150);
+	// Default 250
+	SetConVarInt(FindConVar("z_jockey_speed"), 260);
 
 	// Default 4, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_jockey_ride_damage"), 5);
@@ -672,17 +672,17 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
 
-	// Tank hp on 2 alive survivors = 9228.
-	// Tank hp on 3 alive survivors = 12764.
-	// Tank hp on 4 alive survivors = 16067.
-	int tank_hp = RoundToNearest(5300.0 * Pow(float(g_alive_survivors), 0.8));
+	// Tank hp on 2 alive survivors = 10303.
+	// Tank hp on 3 alive survivors = 14135.
+	// Tank hp on 4 alive survivors = 17691.
+	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.78));
 		
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-	// Tank burn time on 2 alive survivors = 98 s (1:38 min).
-	// Tank burn time on 3 alive survivors = 136 s (2:16 min).
-	// Tank burn time on 4 alive survivors = 171 s (2:51 min).
+	// Tank burn time on 2 alive survivors = 109 s (1:49 min).
+	// Tank burn time on 3 alive survivors = 150 s (2:30 min).
+	// Tank burn time on 4 alive survivors = 189 s (3:09 min).
 	// The constant factor was calculated from default values.
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
@@ -707,7 +707,7 @@ Action on_take_damage_tank(int victim, int& attacker, int& inflictor, float& dam
 	// Melee should do one instance of damage larger than zero and multiple instances of zero damage,
 	// so ignore zero damage.
 	if (!strcmp(classname, "weapon_melee") && FloatAbs(damage) >= 0.000001) {
-		damage = GetEntProp(victim, Prop_Data, "m_fFlags") & FL_ONFIRE ? 800.0 : 400.0;
+		damage = 400.0;
 		
 		#if DEBUG_DAMAGE_MOD
 		debug_on_take_damage(victim, attacker, inflictor, damage);

@@ -27,13 +27,12 @@ Brief description:
 - Always spawn wandering witches.
 - Set tongue_break_from_damage_amount to same value as in Versus.
 - Set Hunter claw damage to 20.
-- Set Jockey health to 300.
+- Set Jockey health to 250.
 - Set Jockey ride damage to 15.
-- Set Jockey leap range to 150.
+- Set Jockey speed to 260.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors (Normal mod).
 - Tank is faster while on fire.
-- Tank takes double melee damage while on fire.
 - Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
 - Halve damage from crouched Common/Uncommon Infected.
 - Shotguns are more effective at close range against Common Infected.
@@ -73,6 +72,13 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 35.0.0
+- Jockey is slightly faster.
+- Set jockey health to 250.
+- Increase tank health.
+- Revert jockey leap range to the default.
+- Revert tank takes double melee damage while on fire.
 
 Version 34.1.0
 - Fix common infected shove immunity while climbing.
