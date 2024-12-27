@@ -73,6 +73,11 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 36.0.0
+- Revert jockey health to default (325).
+- Slightly reduce tank health.
+- Revert disable tank spawn on c4m3_sugarmill_b.
+
 Version 35.0.0
 - Jockey is slightly faster.
 - Set jockey health to 250.

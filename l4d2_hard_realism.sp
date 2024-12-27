@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "35.0.0"
+#define VERSION "36.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -220,7 +220,7 @@ public void OnConfigsExecuted()
 
 	// Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
 	static const char director_no_bosses[] = "director_no_bosses";
-	if (!strcmp(buffer, "c4m3_sugarmill_b") || !strcmp(buffer, "c4m4_milltown_b"))
+	if (!strcmp(buffer, "c4m4_milltown_b"))
 		SetConVarInt(FindConVar(director_no_bosses), 1);
 	else
 		SetConVarInt(FindConVar(director_no_bosses), 0);
@@ -232,9 +232,6 @@ public void OnConfigsExecuted()
 	// Workaround. It will be halved by on_take_damage().
 	// Default 5, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
-
-	// Default 325.
-	SetConVarInt(FindConVar("z_jockey_health"), 250);
 
 	// Default 250
 	SetConVarInt(FindConVar("z_jockey_speed"), 260);
@@ -672,17 +669,17 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
 
-	// Tank hp on 2 alive survivors = 10303.
-	// Tank hp on 3 alive survivors = 14135.
-	// Tank hp on 4 alive survivors = 17691.
-	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.78));
+	// Tank hp on 2 alive survivors = 10232.
+	// Tank hp on 3 alive survivors = 13981.
+	// Tank hp on 4 alive survivors = 17448.
+	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.77));
 		
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
 	// Tank burn time on 2 alive survivors = 109 s (1:49 min).
-	// Tank burn time on 3 alive survivors = 150 s (2:30 min).
-	// Tank burn time on 4 alive survivors = 189 s (3:09 min).
+	// Tank burn time on 3 alive survivors = 149 s (2:29 min).
+	// Tank burn time on 4 alive survivors = 185 s (3:05 min).
 	// The constant factor was calculated from default values.
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
