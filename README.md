@@ -5,43 +5,41 @@ HardRealism is a Left 4 Death 2 mod, a SourceMod plugin.
 The goal is to achieve a balance between Realism Expert and Hard Eight (mutation). It's made to be non configurable for consistency and efficiency reasons.
 
 IMPORTANT NOTE: Put the game data l4d2_hard_realism.txt file into "sourcemod/gamedata" folder.  
-IMPORTANT NOTE: HardRealism mode is designed for Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
+IMPORTANT NOTE: HardRealism mode is designed for (based on) Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 Brief description:
-
-*Special Infected (SI) order = Smoker, Boomer, Hunter, Spitter, Jockey, Charger.
-
-- Normal (default) mod and MaxedOut mod.
-- Get active mode with hr_getmod command.
-- Switch between mods with hr_switchmod command.
-- Number of alive survivors is clamped between 2 and 4 (Normal mod).
-- Special Infected limit is relative to the number of alive Survivors (Normal mod).
-- Special Infected max spawn size is relative to the number of alive Survivors (Normal mod).
+- Difficulties: Normal, Hard, Extreme and Max.
+- Get active difficulty with hr_getdifficulty command.
+- Cycle between difficulties with hr_changedifficulty command.
+- Number of alive survivors is clamped to max 4.
+- Special Infected size limits are relative to the active difficulty.
+- Special Infected min spawn size is 2.
+- Special Infected max spawn size is 5.
 - Special Infected max spawn size is reduced by the number of tanks in play.
-- Special Infected spawn size minimum is 3 (Normal mod).
-- Special Infected spawn sizes are random (Normal mod).
-- Special Infected spawn limits in SI order are 2, 1, 2, 1, 2, 2.
-- Special Infected spawn weights in SI order are 60, 100, 60, 100, 60, 60.
-- Special Infected spawn weight reduction factors in SI order are 0.5, 1.0, 0.5, 1.0, 0.5, 0.5.
-- Special Infected spawns are randomly delayed in the range [0.4s, 2.2s].
+- Special Infected spawn sizes are random.
+- Special Infected time limits are relative to the active difficulty.
+- Special Infected min spawn time is 16s.
+- Special Infected max spawn time is 33s.
+- Special Infected spawn times are random.
+- Special Infected spawns are randomly delayed in the range [0.4s, 1.2s].
 - Always spawn wandering witches.
 - Set tongue_break_from_damage_amount to same value as in Versus.
+- Remove tongue victim inaccuracy.
 - Set Hunter claw damage to 20.
-- Set Jockey health to 250.
 - Set Jockey ride damage to 15.
 - Set Jockey speed to 260.
 - Set Charger pound damage to 20.
-- Tank health is relative to the number of alive Survivors (Normal mod).
+- Tank health is relative to the number of alive Survivors.
 - Tank is faster while on fire.
-- Disable tank spawn on c4m3_sugarmill_b and c4m4_milltown_b.
-- Halve damage from crouched Common/Uncommon Infected.
+- Disable tank spawn on c4m4_milltown_b.
+- Set damage from crouched Common/Uncommon Infected to 2.
 - Shotguns are more effective at close range against Common Infected.
 - Set Hunting Rifle damage against Common/Uncommon Infected to 38.
 - Set Military Sniper damage against Common/Uncommon Infected to 38.
 - Set Scout damage against Common/Uncommon Infected to 76.
 - Set AWP damage against Common/Uncommon Infected to 152.
 - Set melee damage against Tank to 400.
-- Fix many IDLE exploits.
+- Fix many IDLE exploits (disable go_away_from_keyboard command).
 - Fix incapacitated dizziness.
 - Fix hit registration (firebulletsfix).
 - Fix weapon reload.
@@ -49,7 +47,7 @@ Brief description:
 - Fix Common Infected shove immunity on landing.
 - Fix common infected shove immunity while climbing.
 - Fix Jockey insta attack after failed leap.
-- Fix Special Infected insta attack after shove.
+- Fix Special Infected attack while staggered.
 - Fix friendly fire while Charger carries survivor.
 - Fix Smoker insta grab.
 - Fix spitter acid spread.
@@ -72,6 +70,14 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 37.0.0
+- Implement new difficulty system.
+- Implement the better fix for Special Infected attack while staggered.
+- Remove tongue victim inaccuracy.
+- Set damage from crouched Common/Uncommon Infected to 2.
+- Slightly increase tank health.
+- Various other small changes.
 
 Version 36.0.0
 - Revert jockey health to default (325).
