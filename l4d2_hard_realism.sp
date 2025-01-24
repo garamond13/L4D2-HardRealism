@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "37.0.0"
+#define VERSION "37.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -79,7 +79,7 @@ Handle g_weapon_trie;
 
 Handle g_get_actual_posture;
 
-// Normal(0), Hard(1), Extreme(2), Max(3)
+// Normal(0), Advanced(1), Extreme(2), Max(3)
 int g_difficulty;
 
 // For firebulletsfix.
@@ -294,7 +294,7 @@ Action command_hr_getdifficulty(int client, int args)
 			PrintToChat(client, "[HR] Normal difficulty.");
 		}
 		case 1: {
-			PrintToChat(client, "[HR] Hard difficulty.");
+			PrintToChat(client, "[HR] Advanced difficulty.");
 		}
 		case 2: {
 			PrintToChat(client, "[HR] Extreme difficulty.");
@@ -324,7 +324,7 @@ Action command_hr_changedifficulty(int client, int args)
 			g_si_max_spawn_interval = 33.0;
 			g_si_spawn_limits = { 2, 1, 2, 1, 2, 2 };
 			g_si_spawn_weights = { 60, 100, 60, 100, 60, 60 };
-			PrintToChatAll("[HR] Hard difficulty set by %N.", client);
+			PrintToChatAll("[HR] Advanced difficulty set by %N.", client);
 		}
 		case 2: {
 			g_si_min_spawn_size = 3;

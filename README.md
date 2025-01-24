@@ -71,6 +71,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 37.1.0
+- Rename Hard into Advanced difficulty.
+
 Version 37.0.0
 - Implement new difficulty system.
 - Implement the better fix for Special Infected attack while staggered.
