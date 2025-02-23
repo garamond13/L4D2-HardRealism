@@ -27,6 +27,7 @@ Brief description:
 - Remove tongue victim inaccuracy.
 - Set Hunter claw damage to 20.
 - Set Jockey ride damage to 15.
+- Set jockey health to 290.
 - Set Jockey speed to 260.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors.
@@ -70,6 +71,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 38.0.0
+- Set jockey health to 290.
 
 Version 37.1.0
 - Rename Hard into Advanced difficulty.

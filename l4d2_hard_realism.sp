@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "37.1.0"
+#define VERSION "38.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -258,6 +258,9 @@ public void OnConfigsExecuted()
 	// Workaround. It will be halved by on_take_damage().
 	// Default 5, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_pounce_damage"), 10);
+
+	// Default 325
+	SetConVarInt(FindConVar("z_jockey_health"), 290);
 
 	// Default 250
 	SetConVarInt(FindConVar("z_jockey_speed"), 260);
