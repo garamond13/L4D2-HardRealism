@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "38.0.0"
+#define VERSION "39.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -69,8 +69,6 @@ float g_si_max_spawn_interval;
 
 // Keep the same order as zombie classes.
 int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
-int g_si_spawn_limits[ZOMBIE_INDEX_SIZE];
-int g_si_spawn_weights[ZOMBIE_INDEX_SIZE];
 
 //
 
@@ -79,7 +77,7 @@ Handle g_weapon_trie;
 
 Handle g_get_actual_posture;
 
-// Normal(0), Advanced(1), Extreme(2), Max(3)
+// Normal(0), Extreme(1)
 int g_difficulty;
 
 // For firebulletsfix.
@@ -194,23 +192,20 @@ public void OnPluginStart()
 	
 	// Register new console commands.
 	RegConsoleCmd("hr_getdifficulty", command_hr_getdifficulty);
-	RegConsoleCmd("hr_changedifficulty", command_hr_changedifficulty);
+	RegConsoleCmd("hr_switchdifficulty", command_hr_switchdifficulty);
 	
 	// Only used internaly.
 	g_hr_istankinplay = CreateConVar("hr_istankinplay", "0");
 
-	set_default_difficulty();
+	set_normal_difficulty();
 }
 
-// Normal difficulty.
-void set_default_difficulty()
+void set_normal_difficulty()
 {
-	g_si_max_spawn_size = 4;
 	g_si_min_spawn_size = 2;
-	g_si_min_spawn_interval = 16.0;
-	g_si_max_spawn_interval = 33.0;
-	g_si_spawn_limits = { 1, 1, 1, 1, 1, 1 };
-	g_si_spawn_weights = { 100, 100, 100, 100, 100, 100 };
+	g_si_max_spawn_size = MAX_SI;
+	g_si_min_spawn_interval = 17.0;
+	g_si_max_spawn_interval = 35.0;
 }
 
 public void OnConfigsExecuted()
@@ -297,55 +292,29 @@ Action command_hr_getdifficulty(int client, int args)
 			PrintToChat(client, "[HR] Normal difficulty.");
 		}
 		case 1: {
-			PrintToChat(client, "[HR] Advanced difficulty.");
-		}
-		case 2: {
 			PrintToChat(client, "[HR] Extreme difficulty.");
-		}
-		case 3: {
-			PrintToChat(client, "[HR] Max difficulty.");
 		}
 	}
 	return Plugin_Handled;
 }
 
-Action command_hr_changedifficulty(int client, int args)
+Action command_hr_switchdifficulty(int client, int args)
 {
 	++g_difficulty;
-	if (g_difficulty > 3) {
+	if (g_difficulty > 1) {
 		g_difficulty = 0;
 	}
 	switch (g_difficulty) {
 		case 0: {
-			set_default_difficulty();
+			set_normal_difficulty();
 			PrintToChatAll("[HR] Normal difficulty set by %N.", client);
 		}
 		case 1: {
-			g_si_min_spawn_size = 2;
-			g_si_max_spawn_size = MAX_SI;
-			g_si_min_spawn_interval = 16.0;
-			g_si_max_spawn_interval = 33.0;
-			g_si_spawn_limits = { 2, 1, 2, 1, 2, 2 };
-			g_si_spawn_weights = { 60, 100, 60, 100, 60, 60 };
-			PrintToChatAll("[HR] Advanced difficulty set by %N.", client);
-		}
-		case 2: {
 			g_si_min_spawn_size = 3;
 			g_si_max_spawn_size = MAX_SI;
-			g_si_min_spawn_interval = 16.0;
-			g_si_max_spawn_interval = 25.0;
-			g_si_spawn_limits = { 2, 1, 2, 1, 2, 2 };
-			g_si_spawn_weights = { 60, 100, 60, 100, 60, 60 };
+			g_si_min_spawn_interval = 17.0;
+			g_si_max_spawn_interval = 17.0;
 			PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
-		}
-		case 3: {
-			g_si_min_spawn_size = MAX_SI;
-			g_si_max_spawn_size = MAX_SI;
-			g_si_min_spawn_interval = 16.0;
-			g_si_max_spawn_interval = 16.0;
-			g_si_spawn_limits = { 2, 1, 2, 1, 2, 2 };
-			g_si_spawn_weights = { 60, 100, 60, 100, 60, 60 };
-			PrintToChatAll("[HR] Max difficulty set by %N.", client);
 		}
 	}
 	return Plugin_Handled;
@@ -604,6 +573,8 @@ void auto_spawn_si(Handle timer)
 		#endif
 
 		// Keep the same order as zombie classes.
+		static const int si_spawn_limits[ZOMBIE_INDEX_SIZE] = { 2, 1, 2, 1, 2, 2 };
+ 		static const int si_spawn_weights[ZOMBIE_INDEX_SIZE] = { 60, 100, 60, 100, 60, 60 };
 		static const float si_spawn_weight_mods[ZOMBIE_INDEX_SIZE] = { 0.5, 1.0, 0.5, 1.0, 0.5, 0.5 };
 
 		int tmp_weights[ZOMBIE_INDEX_SIZE];
@@ -613,8 +584,8 @@ void auto_spawn_si(Handle timer)
 			// Calculate temporary weights and their weight sum, including reductions.
 			int tmp_wsum;
 			for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i) {
-				if (si_type_counts[i] < g_si_spawn_limits[i]) {
-					tmp_weights[i] = g_si_spawn_weights[i];
+				if (si_type_counts[i] < si_spawn_limits[i]) {
+					tmp_weights[i] = si_spawn_weights[i];
 					int tmp_count = si_type_counts[i];
 					while (tmp_count) {
 						tmp_weights[i] = RoundToNearest(float(tmp_weights[i]) * si_spawn_weight_mods[i]);
@@ -741,18 +712,18 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientOfUserId(userid);
 
 	// Tank hp on 1 alive survivor = 6000.
-	// Tank hp on 2 alive survivors = 10303.
-	// Tank hp on 3 alive survivors = 14135.
-	// Tank hp on 4 alive survivors = 17691.
-	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.78));
-		
+ 	// Tank hp on 2 alive survivors = 10447.
+ 	// Tank hp on 3 alive survivors = 14449.
+ 	// Tank hp on 4 alive survivors = 18189.
+	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.8));
+
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
 	// Tank burn time on 1 alive survivors = 64 s (1:04 min).
-	// Tank burn time on 2 alive survivors = 109 s (1:49 min).
-	// Tank burn time on 3 alive survivors = 150 s (2:30 min).
-	// Tank burn time on 4 alive survivors = 188 s (3:08 min).
+ 	// Tank burn time on 2 alive survivors = 111 s (1:51 min).
+ 	// Tank burn time on 3 alive survivors = 154 s (2:34 min).
+ 	// Tank burn time on 4 alive survivors = 193 s (3:13 min).
 	// The constant factor was calculated from default values.
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 
@@ -1273,7 +1244,7 @@ void on_end()
 public void OnServerEnterHibernation()
 {
 	g_difficulty = 0;
-	set_default_difficulty();
+	set_normal_difficulty();
 }
 
 #if DEBUG_DAMAGE_MOD

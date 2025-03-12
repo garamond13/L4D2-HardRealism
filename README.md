@@ -8,9 +8,9 @@ IMPORTANT NOTE: Put the game data l4d2_hard_realism.txt file into "sourcemod/gam
 IMPORTANT NOTE: HardRealism mode is designed for (based on) Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 Brief description:
-- Difficulties: Normal, Hard, Extreme and Max.
+- Difficulties: Normal and Extreme.
 - Get active difficulty with hr_getdifficulty command.
-- Cycle between difficulties with hr_changedifficulty command.
+- Cycle between difficulties with hr_switchdifficulty command.
 - Number of alive survivors is clamped to max 4.
 - Special Infected size limits are relative to the active difficulty.
 - Special Infected min spawn size is 2.
@@ -18,8 +18,8 @@ Brief description:
 - Special Infected max spawn size is reduced by the number of tanks in play.
 - Special Infected spawn sizes are random.
 - Special Infected time limits are relative to the active difficulty.
-- Special Infected min spawn time is 16s.
-- Special Infected max spawn time is 33s.
+- Special Infected min spawn time is 17s.
+- Special Infected max spawn time is 35s.
 - Special Infected spawn times are random.
 - Special Infected spawns are randomly delayed in the range [0.4s, 1.2s].
 - Always spawn wandering witches.
@@ -71,6 +71,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 39.0.0
+- Rework difficulty system.
+- Slightly increase tank health.
 
 Version 38.0.0
 - Set jockey health to 290.
