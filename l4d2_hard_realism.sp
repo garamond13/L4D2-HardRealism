@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "39.0.0"
+#define VERSION "40.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -76,6 +76,8 @@ int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
 Handle g_weapon_trie;
 
 Handle g_get_actual_posture;
+
+float g_tank_base_health;
 
 // Normal(0), Extreme(1)
 int g_difficulty;
@@ -206,6 +208,7 @@ void set_normal_difficulty()
 	g_si_max_spawn_size = MAX_SI;
 	g_si_min_spawn_interval = 17.0;
 	g_si_max_spawn_interval = 35.0;
+	g_tank_base_health = 5300.0;
 }
 
 public void OnConfigsExecuted()
@@ -314,6 +317,7 @@ Action command_hr_switchdifficulty(int client, int args)
 			g_si_max_spawn_size = MAX_SI;
 			g_si_min_spawn_interval = 17.0;
 			g_si_max_spawn_interval = 17.0;
+			g_tank_base_health = 6000.0;
 			PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
 		}
 	}
@@ -710,20 +714,10 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
-
-	// Tank hp on 1 alive survivor = 6000.
- 	// Tank hp on 2 alive survivors = 10447.
- 	// Tank hp on 3 alive survivors = 14449.
- 	// Tank hp on 4 alive survivors = 18189.
-	int tank_hp = RoundToNearest(6000.0 * Pow(float(g_alive_survivors), 0.8));
-
+	int tank_hp = RoundToNearest(g_tank_base_health * Pow(float(g_alive_survivors), 0.8));
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
-	// Tank burn time on 1 alive survivors = 64 s (1:04 min).
- 	// Tank burn time on 2 alive survivors = 111 s (1:51 min).
- 	// Tank burn time on 3 alive survivors = 154 s (2:34 min).
- 	// Tank burn time on 4 alive survivors = 193 s (3:13 min).
 	// The constant factor was calculated from default values.
 	SetConVarInt(FindConVar("tank_burn_duration_expert"), RoundToNearest(float(tank_hp) * 0.010625));
 

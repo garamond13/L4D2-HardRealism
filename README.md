@@ -72,6 +72,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 40.0.0
+- Tank health based on difficulty.
+
 Version 39.0.0
 - Rework difficulty system.
 - Slightly increase tank health.
