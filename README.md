@@ -72,6 +72,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 40.1.0
+- Increase director AFK timeout to 30s.
+
 Version 40.0.0
 - Tank health based on difficulty.
 

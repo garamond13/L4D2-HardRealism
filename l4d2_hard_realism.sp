@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "40.0.0"
+#define VERSION "40.1.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -285,7 +285,7 @@ public void OnConfigsExecuted()
 
 	// Compensate for IDLE exploits fix.
 	// Default 45.
-	SetConVarInt(FindConVar("director_afk_timeout"), 20);
+	SetConVarInt(FindConVar("director_afk_timeout"), 30);
 }
 
 Action command_hr_getdifficulty(int client, int args)
