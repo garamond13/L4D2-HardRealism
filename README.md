@@ -72,6 +72,11 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 41.0.0
+- Adjust difficulties.
+- Add a new difficulty. Max difficulty.
+- Remove z_jockey_speed change.
+
 Version 40.1.0
 - Increase director AFK timeout to 30s.
 

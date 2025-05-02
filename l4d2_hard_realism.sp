@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "40.1.0"
+#define VERSION "41.0.0"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -208,7 +208,7 @@ void set_normal_difficulty()
 	g_si_max_spawn_size = MAX_SI;
 	g_si_min_spawn_interval = 17.0;
 	g_si_max_spawn_interval = 35.0;
-	g_tank_base_health = 5300.0;
+	g_tank_base_health = 5200.0;
 }
 
 public void OnConfigsExecuted()
@@ -260,9 +260,6 @@ public void OnConfigsExecuted()
 	// Default 325
 	SetConVarInt(FindConVar("z_jockey_health"), 290);
 
-	// Default 250
-	SetConVarInt(FindConVar("z_jockey_speed"), 260);
-
 	// Default 4, it will be multiplied by 3 on Realsim Expert.
 	SetConVarInt(FindConVar("z_jockey_ride_damage"), 5);
 
@@ -297,6 +294,9 @@ Action command_hr_getdifficulty(int client, int args)
 		case 1: {
 			PrintToChat(client, "[HR] Extreme difficulty.");
 		}
+		case 2: {
+			PrintToChat(client, "[HR] Max difficulty.");
+		}
 	}
 	return Plugin_Handled;
 }
@@ -304,7 +304,7 @@ Action command_hr_getdifficulty(int client, int args)
 Action command_hr_switchdifficulty(int client, int args)
 {
 	++g_difficulty;
-	if (g_difficulty > 1) {
+	if (g_difficulty > 2) {
 		g_difficulty = 0;
 	}
 	switch (g_difficulty) {
@@ -316,9 +316,17 @@ Action command_hr_switchdifficulty(int client, int args)
 			g_si_min_spawn_size = 3;
 			g_si_max_spawn_size = MAX_SI;
 			g_si_min_spawn_interval = 17.0;
-			g_si_max_spawn_interval = 17.0;
+			g_si_max_spawn_interval = 24.0;
 			g_tank_base_health = 6000.0;
 			PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
+		}
+		case 2: {
+			g_si_min_spawn_size = MAX_SI;
+			g_si_max_spawn_size = MAX_SI;
+			g_si_min_spawn_interval = 17.0;
+			g_si_max_spawn_interval = 17.1;
+			g_tank_base_health = 6000.0;
+			PrintToChatAll("[HR] Max difficulty set by %N.", client);
 		}
 	}
 	return Plugin_Handled;
