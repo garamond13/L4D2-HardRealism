@@ -4,12 +4,6 @@
 	{
 		"Offsets"
 		{
-			"CBasePlayer::Weapon_ShootPosition"
-			{
-				"windows" "285"
-				"linux" "286"
-			}
-
 			"CBaseEntity::MyNextBotPointer"
 			{
 				"windows" "81"
@@ -26,18 +20,6 @@
 			{
 				"windows" "62"
 				"linux" "63"
-			}
-
-			"INextBot::GetLocomotionInterface"
-			{
-				"windows" "47"
-				"linux" "48"
-			}
-
-			"ZombieBotLocomotion::m_ladder"
-			{
-				"windows" "232"
-				"linux" "232"
 			}
 		}
 	}
