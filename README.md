@@ -40,22 +40,9 @@ Brief description:
 - Set Scout damage against Common/Uncommon Infected to 76.
 - Set AWP damage against Common/Uncommon Infected to 152.
 - Set melee damage against Tank to 400.
-- Fix many IDLE exploits (disable go_away_from_keyboard command).
-- Fix incapacitated dizziness.
-- Fix hit registration (firebulletsfix).
-- Fix weapon reload.
-- Fix Common Infected shove direction.
-- Fix Common Infected shove immunity on landing.
-- Fix common infected shove immunity while climbing.
-- Fix Jockey insta attack after failed leap.
-- Fix Special Infected attack while staggered.
-- Fix friendly fire while Charger carries survivor.
-- Fix Smoker insta grab.
-- Fix spitter acid spread.
 
 ## Compilation
 
-Depends on (required) [Actions](https://forums.alliedmods.net/showthread.php?p=2771520#post2771520).  
 Idealy compile with SourceMod version 1.12.  
 
 If you don't know how to compile it into SourceMod plugin (.smx) see https://wiki.alliedmods.net/Compiling_SourceMod_Plugins
@@ -71,6 +58,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 42.0.0
+- Separate game fixes from the mod.
 
 Version 41.0.0
 - Adjust difficulties.
