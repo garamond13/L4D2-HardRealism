@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "41.0.0"
+#define VERSION "41.0.1"
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -1053,7 +1053,7 @@ Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionRes
 	//
 
 	int userid = GetClientUserId(actor);
-	const float delay = 0.2;
+	const float delay = 0.3;
 
 	// We already have a timer?
 	for (int i = 0; i < 2; ++i) {
