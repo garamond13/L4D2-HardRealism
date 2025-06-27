@@ -6,7 +6,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "42.0.0"
+#define VERSION "43.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -21,12 +21,6 @@ public Plugin myinfo = {
 #define DEBUG_SI_SPAWN 0
 #define DEBUG_TANK_HP 0
 #define DEBUG_POSTURE 0
-
-// From command "maxplayers".
-#define L4D2_MAXPLAYERS 18
-
-// Maximum number of alive special infected.
-#define MAX_SI 5
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -135,7 +129,7 @@ public void OnPluginStart()
 void set_normal_difficulty()
 {
     g_si_min_spawn_size = 2;
-    g_si_max_spawn_size = MAX_SI;
+    g_si_max_spawn_size = 4;
     g_si_min_spawn_interval = 17.0;
     g_si_max_spawn_interval = 35.0;
     g_tank_base_health = 5200.0;
@@ -218,16 +212,16 @@ Action command_hr_switchdifficulty(int client, int args)
             PrintToChatAll("[HR] Normal difficulty set by %N.", client);
         }
         case 1: {
-            g_si_min_spawn_size = 3;
-            g_si_max_spawn_size = MAX_SI;
+            g_si_min_spawn_size = 2;
+            g_si_max_spawn_size = 5;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 24.0;
             g_tank_base_health = 6000.0;
             PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
         }
         case 2: {
-            g_si_min_spawn_size = MAX_SI;
-            g_si_max_spawn_size = MAX_SI;
+            g_si_min_spawn_size = 5;
+            g_si_max_spawn_size = 5;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 17.1;
             g_tank_base_health = 6000.0;

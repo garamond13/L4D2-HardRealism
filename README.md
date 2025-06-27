@@ -59,6 +59,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 43.0.0
+- Set max alive special infect to 4 for Normal difficulty.
+- Set min spawn special infect size to 2 for Extreme difficulty.
+
 Version 42.0.0
 - Separate game fixes from the mod.
 
