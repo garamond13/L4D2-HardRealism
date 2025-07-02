@@ -1,12 +1,14 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
+#include <dhooks>
+#include <actions>
 
 #pragma semicolon 1
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "43.0.0"
+#define VERSION "44.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -16,11 +18,36 @@ public Plugin myinfo = {
     url = "https://github.com/garamond13/L4D2-HardRealism"
 };
 
+// Optional game fixes
+#define FIX_FIREBULLETS 1
+#define FIX_IDLE_EXPLOITS 1
+#define FIX_INCAPACITATED_DIZZINESS 1
+#define FIX_SPITTER_ACID_SPREAD 1
+#define FIX_STAGGERED_ATTACK 1
+#define FIX_WEAPON_RELOAD 1
+#define FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP 1
+#define FIX_CHARGER_CARRY_FF 1
+#define FIX_SMOKER_INSTA_GRAB 1
+#define FIX_COMMONS_SHOVE_IMUNITY 1
+#define FIX_COMMONS_SHOVE_DIRECTION 1
+
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
 #define DEBUG_SI_SPAWN 0
 #define DEBUG_TANK_HP 0
 #define DEBUG_POSTURE 0
+#define DEBUG_SHOVE 0
+#define DEBUG_CHARGER 0
+#define DEBUG_SMOKER 0
+#define DEBUG_FIREBULLETSFIX 0
+#define DEBUG_JOCKEY 0
+#define DEBUG_SPITTER 0
+
+// From command "maxplayers".
+#define L4D2_MAXPLAYERS 18
+
+// Maximum number of alive special infected.
+#define MAX_SI 5
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -48,7 +75,7 @@ public Plugin myinfo = {
 #define ZOMBIE_INDEX_CHARGER 5
 #define ZOMBIE_INDEX_SIZE 6
 
-#if DEBUG_SI_SPAWN
+#if DEBUG_SI_SPAWN || DEBUG_SHOVE || DEBUG_JOCKEY
 // Keep the same order as zombie classes.
 static const char g_debug_si_indexes[ZOMBIE_INDEX_SIZE][] = { "ZOMBIE_INDEX_SMOKER", "ZOMBIE_INDEX_BOOMER", "ZOMBIE_INDEX_HUNTER", "ZOMBIE_INDEX_SPITTER", "ZOMBIE_INDEX_JOCKEY", "ZOMBIE_INDEX_CHARGER" };
 #endif
@@ -66,21 +93,61 @@ int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
 
 //
 
+// Damage mod
+Handle g_weapon_trie;
+
 Handle g_my_next_bot_pointer;
 Handle g_get_body_interface;
 Handle g_get_actual_posture;
-
-// Damage mod
-Handle g_weapon_trie;
 
 float g_tank_base_health;
 
 // Normal(0), Extreme(1)
 int g_difficulty;
 
+
+#if FIX_FIREBULLETS
+Handle g_weapon_shoot_position;
+float g_old_weapon_shoot_position[L4D2_MAXPLAYERS + 1][3];
+#endif
+
+#if FIX_COMMONS_SHOVE_IMUNITY
+// Source: left4dhooks_anim
+enum
+{
+    L4D2_ACT_TERROR_JUMP_LANDING = 662,
+    L4D2_ACT_TERROR_JUMP_LANDING_HARD,
+    L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
+    L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL
+};
+
+Handle g_get_locomotion_interface;
+int g_m_ladder_offset;
+#endif
+
+#if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+enum struct Clear_in_attack2_timer
+{
+    int userid;
+    Handle timer;
+}
+
+// Set array size to the max possible jockeys limit.
+Clear_in_attack2_timer g_clear_in_attack2_timers[2];
+#endif
+
+#if FIX_SPITTER_ACID_SPREAD
+int g_spitter_projectile;
+#endif
+
 public void OnPluginStart()
 {
     Handle gamedata = LoadGameConfigFile("l4d2_hard_realism");
+    
+    #if FIX_FIREBULLETS
+    // Vector CBasePlayer::Weapon_ShootPosition()
+    g_weapon_shoot_position = DHookCreate(GameConfGetOffset(gamedata, "CBasePlayer::Weapon_ShootPosition"), HookType_Entity, ReturnType_Vector, ThisPointer_CBaseEntity, on_weapon_shoot_position);
+    #endif
 
     // INextBot* CBaseEntity::MyNextBotPointer()
     StartPrepSDKCall(SDKCall_Entity);
@@ -100,6 +167,16 @@ public void OnPluginStart()
     PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
     g_get_actual_posture = EndPrepSDKCall();
 
+    #if FIX_COMMONS_SHOVE_IMUNITY
+    // ZombieBotLocomotion* INextBot::GetLocomotionInterface()
+    StartPrepSDKCall(SDKCall_Raw);
+    PrepSDKCall_SetFromConf(gamedata, SDKConf_Virtual, "INextBot::GetLocomotionInterface");
+    PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+    g_get_locomotion_interface = EndPrepSDKCall();
+
+    g_m_ladder_offset = GameConfGetOffset(gamedata, "ZombieBotLocomotion::m_ladder");
+    #endif
+
     CloseHandle(gamedata);
 
     // Map modded damage.
@@ -110,12 +187,39 @@ public void OnPluginStart()
     SetTrieValue(g_weapon_trie, "sniper_awp", 152.0);
 
     // Hook game events.
+    //
+
     HookEvent("player_left_safe_area", event_player_left_safe_area, EventHookMode_PostNoCopy);
     HookEvent("player_spawn", event_player_spawn);
     HookEvent("player_death", event_player_death);
     HookEvent("tank_spawn", event_tank_spawn, EventHookMode_Pre);
     HookEvent("round_end", event_round_end, EventHookMode_PostNoCopy);
     
+    #if FIX_WEAPON_RELOAD
+    HookEvent("weapon_reload", event_weapon_reload);
+    #endif
+    
+    #if FIX_CHARGER_CARRY_FF
+    HookEvent("charger_carry_start", event_charger_carry_start);
+    HookEvent("charger_carry_end", event_charger_carry_end);
+    #endif
+    
+    #if FIX_SMOKER_INSTA_GRAB
+    HookEvent("tongue_grab", event_tongue_grab);
+    #endif
+    
+    #if FIX_SPITTER_ACID_SPREAD
+    HookEvent("spit_burst", event_spit_burst);
+    #endif
+
+    #if FIX_IDLE_EXPLOITS
+    // Disable IDLE command.
+    static const char go_away_from_keyboard[] = "go_away_from_keyboard";
+    SetCommandFlags(go_away_from_keyboard, GetCommandFlags(go_away_from_keyboard) | FCVAR_CHEAT);
+    #endif
+
+    //
+
     // Register new console commands.
     RegConsoleCmd("hr_getdifficulty", command_hr_getdifficulty);
     RegConsoleCmd("hr_switchdifficulty", command_hr_switchdifficulty);
@@ -129,7 +233,7 @@ public void OnPluginStart()
 void set_normal_difficulty()
 {
     g_si_min_spawn_size = 2;
-    g_si_max_spawn_size = 4;
+    g_si_max_spawn_size = MAX_SI;
     g_si_min_spawn_interval = 17.0;
     g_si_max_spawn_interval = 35.0;
     g_tank_base_health = 5200.0;
@@ -182,6 +286,20 @@ public void OnConfigsExecuted()
 
     // Default 100.
     SetConVarInt(FindConVar("z_shotgun_bonus_damage_range"), 150);
+
+    #if FIX_INCAPACITATED_DIZZINESS
+    // Default 2.0.
+    SetConVarFloat(FindConVar("survivor_incapacitated_dizzy_severity"), 0.0);
+
+    // Default 2.5.
+    SetConVarFloat(FindConVar("survivor_incapacitated_dizzy_timer"), 0.0);
+    #endif
+
+    #if FIX_IDLE_EXPLOITS
+    // Compensate for IDLE exploits fix.
+    // Default 45.
+    SetConVarInt(FindConVar("director_afk_timeout"), 30);
+    #endif
 }
 
 Action command_hr_getdifficulty(int client, int args)
@@ -212,16 +330,16 @@ Action command_hr_switchdifficulty(int client, int args)
             PrintToChatAll("[HR] Normal difficulty set by %N.", client);
         }
         case 1: {
-            g_si_min_spawn_size = 2;
-            g_si_max_spawn_size = 5;
+            g_si_min_spawn_size = 3;
+            g_si_max_spawn_size = MAX_SI;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 24.0;
             g_tank_base_health = 6000.0;
             PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
         }
         case 2: {
-            g_si_min_spawn_size = 5;
-            g_si_max_spawn_size = 5;
+            g_si_min_spawn_size = MAX_SI;
+            g_si_max_spawn_size = MAX_SI;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 17.1;
             g_tank_base_health = 6000.0;
@@ -236,6 +354,12 @@ public void OnEntityCreated(int entity, const char[] classname)
     if (!strcmp(classname, "infected")) {
         SDKHook(entity, SDKHook_OnTakeDamage, on_take_damage_infected);
     }
+    
+    #if FIX_SPITTER_ACID_SPREAD
+    else if (!strcmp(classname, "spitter_projectile")) {
+        g_spitter_projectile = entity;
+    }
+    #endif
 }
 
 Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
@@ -677,6 +801,458 @@ Action set_tank_speed(Handle timer, int data)
     return Plugin_Stop;
 }
 
+// firebulletsfix
+// Source: https://forums.alliedmods.net/showthread.php?t=315405
+//
+
+#if FIX_FIREBULLETS
+public void OnClientPutInServer(int client)
+{
+    if (!IsFakeClient(client)) {
+        DHookEntity(g_weapon_shoot_position, true, client);
+    }
+}
+#endif
+
+#if FIX_STAGGERED_ATTACK || FIX_FIREBULLETS
+public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
+{
+    if (IsFakeClient(client)) {
+        #if FIX_STAGGERED_ATTACK
+        if (GetClientTeam(client) == TEAM_INFECTED) {
+            int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
+            if (zombie_class >= 1 && zombie_class <= 6 && GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) > -1.0) {
+                buttons &= ~IN_ATTACK2;
+            }
+        }
+        #endif
+    }
+
+    #if FIX_FIREBULLETS
+    else if (IsPlayerAlive(client)) {
+        GetClientEyePosition(client, g_old_weapon_shoot_position[client]);
+    }
+    #endif
+    
+    return Plugin_Continue;
+}
+#endif
+
+#if FIX_FIREBULLETS
+MRESReturn on_weapon_shoot_position(int pThis, DHookReturn hReturn)
+{
+    #if DEBUG_FIREBULLETSFIX
+    float vec[3];
+    DHookGetReturnVector(hReturn, vec);
+    PrintToChatAll("[HR] %N Old ShootPosition: %.2f, %.2f, %.2f", pThis, g_old_weapon_shoot_position[pThis][0], g_old_weapon_shoot_position[pThis][1], g_old_weapon_shoot_position[pThis][2]);
+    PrintToChatAll("[HR] %N New ShootPosition: %.2f, %.2f, %.2f", pThis, vec[0], vec[1], vec[2]);
+    #endif
+
+    DHookSetReturnVector(hReturn, g_old_weapon_shoot_position[pThis]);
+    return MRES_Supercede;
+}
+#endif
+
+//
+
+#if FIX_WEAPON_RELOAD
+void event_weapon_reload(Event event, const char[] name, bool dontBroadcast)
+{
+    int userid = GetEventInt(event, "userid");
+    int weapon = GetEntPropEnt(GetClientOfUserId(userid), Prop_Data, "m_hActiveWeapon");
+    
+    // The classname will have prefix weapon_
+    char weapon_name[24];
+    GetEntityClassname(weapon, weapon_name, sizeof(weapon_name));
+    
+    if (!strcmp(weapon_name[7], "pistol")) {
+        if (GetEntProp(weapon, Prop_Send, "m_isDualWielding")) {
+            if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0) {
+                set_pistol_ammo_timer(1.8, weapon, 30, userid);
+            }
+            else {
+                set_pistol_ammo_timer(2.1, weapon, 30, userid);
+            }
+        }
+        else {
+            if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0) {
+                set_pistol_ammo_timer(1.2, weapon, 15, userid);
+            }
+            else {
+                set_pistol_ammo_timer(1.5, weapon, 15, userid);
+            }
+        }
+    }
+    else if (!strcmp(weapon_name[7], "pistol_magnum")) {
+        if (GetEntProp(weapon, Prop_Data, "m_iClip1") > 0) {
+            set_pistol_ammo_timer(1.2, weapon, 8, userid);
+        }
+        else {
+            set_pistol_ammo_timer(1.5, weapon, 8, userid);
+        }
+    }
+    else if (!strcmp(weapon_name[7], "smg") || !strcmp(weapon_name[7], "smg_silenced")) {
+        set_ammo_timer(1.6, weapon, 50, userid);
+    }
+    else if (!strcmp(weapon_name[7], "smg_mp5")) {
+        set_ammo_timer(2.4, weapon, 50, userid);
+    }
+    else if (!strcmp(weapon_name[7], "rifle")) {
+        set_ammo_timer(1.6, weapon, 50, userid);
+    }
+    else if (!strcmp(weapon_name[7], "rifle_ak47")) {
+        set_ammo_timer(1.8, weapon, 40, userid);
+    }
+    else if (!strcmp(weapon_name[7], "rifle_desert")) {
+        set_ammo_timer(2.5, weapon, 60, userid);
+    }
+    else if (!strcmp(weapon_name[7], "rifle_sg552")) {
+        set_ammo_timer(2.6, weapon, 50, userid);
+    }
+    else if (!strcmp(weapon_name[7], "hunting_rifle")) {
+        set_ammo_timer(2.5, weapon, 15, userid);
+    }
+    else if (!strcmp(weapon_name[7], "sniper_military")) {
+        set_ammo_timer(2.5, weapon, 30, userid);
+    }
+    else if (!strcmp(weapon_name[7], "sniper_scout")) {
+        set_ammo_timer(2.4, weapon, 15, userid);
+    }
+    else if (!strcmp(weapon_name[7], "sniper_awp")) {
+        set_ammo_timer(3.3, weapon, 20, userid);
+    }
+    else if (!strcmp(weapon_name[7], "grenade_launcher")) {
+        set_ammo_timer(3.0, weapon, 1, userid);
+    }
+}
+
+void set_ammo_timer(float time, int weapon, int clip_max, int userid)
+{
+    Handle pack;
+    CreateDataTimer(time, set_ammo, pack, TIMER_FLAG_NO_MAPCHANGE);
+    WritePackCell(pack, weapon);
+    WritePackCell(pack, clip_max);
+    WritePackCell(pack, userid);
+}
+
+void set_pistol_ammo_timer(float time, int weapon, int clip_max, int userid)
+{
+    Handle pack;
+    CreateDataTimer(time, set_pistol_ammo, pack, TIMER_FLAG_NO_MAPCHANGE);
+    WritePackCell(pack, weapon);
+    WritePackCell(pack, clip_max);
+    WritePackCell(pack, userid);
+}
+
+void set_ammo(Handle tiemr, Handle data)
+{
+    // Unpack data.
+    ResetPack(data);
+    int weapon = ReadPackCell(data);
+    int clip_max = ReadPackCell(data);
+    int client = GetClientOfUserId(ReadPackCell(data));
+
+    if (client && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon && GetEntProp(weapon, Prop_Data, "m_bInReload")) {
+        int primary_ammo_type = GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType");
+        int ammo = GetEntProp(client, Prop_Data, "m_iAmmo", 4, primary_ammo_type);
+        int clip = GetEntProp(weapon, Prop_Data, "m_iClip1");
+        int clip_to_max = clip_max - clip;
+
+        // Set clip ammo.
+        if (ammo + clip > clip_max) {
+            SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
+        }
+        else {
+            SetEntProp(weapon, Prop_Data, "m_iClip1", ammo + clip);
+        }
+        
+        // Set total ammo.
+        if (ammo > clip_to_max) {
+            SetEntProp(client, Prop_Data, "m_iAmmo", ammo - clip_to_max, 4, primary_ammo_type);
+        }
+        else {
+            SetEntProp(client, Prop_Data, "m_iAmmo", 0, 4, primary_ammo_type);
+        }
+    }
+}
+
+void set_pistol_ammo(Handle tiemr, Handle data)
+{
+    // Unpack data.
+    ResetPack(data);
+    int weapon = ReadPackCell(data);
+    int clip_max = ReadPackCell(data);
+    int client = GetClientOfUserId(ReadPackCell(data));
+
+    if (client && GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == weapon && GetEntProp(weapon, Prop_Data, "m_bInReload")) {
+        SetEntProp(weapon, Prop_Data, "m_iClip1", clip_max);
+    }
+}
+#endif // FIX_WEAPON_RELOAD
+
+#if FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION || FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
+{
+    #if FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION
+    if (!strcmp(name, "InfectedShoved")) {
+        
+        #if FIX_COMMONS_SHOVE_IMUNITY
+        __action_setlistener(action, __action_processor_OnStart, infected_shoved_on_start, false);
+        #endif
+
+        #if FIX_COMMONS_SHOVE_DIRECTION
+        __action_setlistener(action, __action_processor_OnShoved, infected_shoved_on_shoved, false);
+        #endif
+    }
+    #endif
+    
+    #if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+    else if (!strcmp(name, "JockeyAttack")) {
+        __action_setlistener(action, __action_processor_OnResume, jockey_attack_on_resume, true);
+    }
+    #endif
+}
+#endif
+
+#if FIX_COMMONS_SHOVE_IMUNITY
+Action infected_shoved_on_start(any action, int actor, any priorAction, ActionResult result)
+{
+    Address my_next_bot_pointer = SDKCall(g_my_next_bot_pointer, actor);
+    
+    // Common infected shove immunity on landing fix.
+    // Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
+    //
+
+    Address body_interface = SDKCall(g_get_body_interface, my_next_bot_pointer);
+
+    // Get m_activity and check for landing.
+    switch (LoadFromAddress(body_interface + view_as<Address>(80), NumberType_Int32)) {
+        case
+            L4D2_ACT_TERROR_JUMP_LANDING,
+            L4D2_ACT_TERROR_JUMP_LANDING_HARD,
+            L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
+            L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
+
+            #if DEBUG_SHOVE
+            PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING");
+            #endif
+
+            // Get m_activityType and clear ACTIVITY_UNINTERRUPTIBLE flag.
+            Address activity_type = body_interface + view_as<Address>(84);
+            StoreToAddress(activity_type, LoadFromAddress(activity_type, NumberType_Int32) & ~4, NumberType_Int32, false);
+        }
+    }
+
+    //
+
+    // Common infected shove immunity while climbing fix.
+    // Source: https://github.com/Target5150/MoYu_Server_Stupid_Plugins/tree/master/The%20Last%20Stand/l4d_fix_common_shove
+    StoreToAddress(SDKCall(g_get_locomotion_interface, my_next_bot_pointer) + view_as<Address>(g_m_ladder_offset), Address_Null, NumberType_Int32, false);
+
+    return Plugin_Continue;
+}
+#endif
+
+#if FIX_COMMONS_SHOVE_DIRECTION
+// Source: https://forums.alliedmods.net/showthread.php?t=319988
+Action infected_shoved_on_shoved(any action, int actor, int entity, ActionDesiredResult result)
+{
+    char classname[8];
+    GetEntityClassname(actor, classname, sizeof(classname));
+
+    #if DEBUG_SHOVE
+    PrintToChatAll("[HR] infected_shoved_on_shoved(): %s", classname);
+    #endif
+
+    if (!strcmp(classname, "witch")) {
+        return Plugin_Continue;
+    }
+    return Plugin_Handled;
+}
+#endif
+
+#if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionResult result)
+{
+    #if DEBUG_JOCKEY
+    PrintToChatAll("[HR] jockey_attack_on_resume()");
+    #endif
+
+    // Prevent jockey from attacking.
+    static const char m_afButtonDisabled[] = "m_afButtonDisabled";
+    SetEntProp(actor, Prop_Data, m_afButtonDisabled, GetEntProp(actor, Prop_Data, m_afButtonDisabled) | IN_ATTACK2);
+
+    // Allow jockey to attack again after delay.
+    //
+
+    int userid = GetClientUserId(actor);
+    const float delay = 0.3;
+
+    // We already have a timer?
+    for (int i = 0; i < 2; ++i) {
+        if (g_clear_in_attack2_timers[i].userid == userid) {
+
+            #if DEBUG_JOCKEY
+            PrintToChatAll("[HR] jockey_attack_on_resume(): We already have a timer!");
+            #endif
+
+            return Plugin_Continue;
+        }
+    }
+
+    // We don't have a timer.
+    for (int i = 0; i < 2; ++i) {
+        if (!g_clear_in_attack2_timers[i].userid) {
+            g_clear_in_attack2_timers[i].userid = userid;
+            g_clear_in_attack2_timers[i].timer = CreateTimer(delay, clear_in_attack2, i);
+            return Plugin_Continue;
+        }
+    }
+
+    #if DEBUG_SHOVE
+    PrintToChatAll("[HR] jockey_attack_on_resume(): g_clear_in_attack2_timers has no free slot!");
+    #endif
+
+    //
+
+    return Plugin_Continue;
+}
+
+void clear_in_attack2(Handle timer, int data)
+{
+    int client = GetClientOfUserId(g_clear_in_attack2_timers[data].userid);
+    if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
+        
+        #if (DEBUG_SHOVE || DEBUG_JOCKEY)
+        int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
+        PrintToChatAll("[HR] clear_in_attack2(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
+        #endif
+        
+        static const char m_afButtonDisabled[] = "m_afButtonDisabled";
+        SetEntProp(client, Prop_Data, m_afButtonDisabled, GetEntProp(client, Prop_Data, m_afButtonDisabled) & ~IN_ATTACK2);
+    }
+    g_clear_in_attack2_timers[data].userid = 0;
+    g_clear_in_attack2_timers[data].timer = null;
+}
+#endif // FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+
+#if FIX_CHARGER_CARRY_FF
+void event_charger_carry_start(Event event, const char[] name, bool dontBroadcast)
+{
+    #if DEBUG_CHARGER
+    PrintToChatAll("[HR] event_charger_carry_start(): victim = %N", GetClientOfUserId(GetEventInt(event, "victim")));
+    #endif
+
+    SDKHook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
+}
+
+void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
+{
+    #if DEBUG_CHARGER
+    PrintToChatAll("[HR] event_charger_carry_end(): victim = %N", GetClientOfUserId(GetEventInt(event, "victim")));
+    #endif
+
+    SDKUnhook(GetClientOfUserId(GetEventInt(event, "victim")), SDKHook_OnTakeDamage, on_take_damage_charger_carry);
+}
+
+Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+{
+    if (attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_SURVIVORS) {
+
+        #if DEBUG_CHARGER
+        PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %N, victim = %N", attacker, victim);
+        #endif
+
+        return Plugin_Handled;
+    }
+    return Plugin_Continue;
+}
+#endif // FIX_CHARGER_CARRY_FF
+
+#if FIX_SMOKER_INSTA_GRAB
+void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
+{
+    int victim_id = GetEventInt(event, "victim");
+    int victim = GetClientOfUserId(victim_id);
+
+    // We only need to fix things if the victim is not on "worldspawn".
+    int ground_entity = GetEntPropEnt(victim, Prop_Send, "m_hGroundEntity");
+    if (ground_entity != -1) {
+        char classname[12];
+        GetEntityClassname(ground_entity, classname, sizeof(classname));
+
+        #if DEBUG_SMOKER
+        PrintToChatAll("[HR] event_tongue_grab(): ground_entity = %s", classname);
+        #endif
+            
+        if (strcmp(classname, "worldspawn")) {
+                
+            // We only need to fix things if the smoker is above the victim.
+            float smoker_origin[3];
+            float victim_origin[3];
+            GetClientAbsOrigin(GetClientOfUserId(GetEventInt(event, "userid")), smoker_origin);
+            GetClientAbsOrigin(victim, victim_origin);
+            if (smoker_origin[2] > victim_origin[2]) {
+
+                #if DEBUG_SMOKER
+                PrintToChatAll("[HR] event_tongue_grab(): smoker_origin.z > victim_origin.z");
+                #endif
+
+                // Run VScript code.
+                //
+
+                int logic = CreateEntityByName("logic_script");
+                DispatchSpawn(logic);
+                char buffer[172];
+
+                // Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945656229
+                FormatEx(buffer, sizeof(buffer), "local v=GetPlayerFromUserID(%i);NetProps.SetPropEntity(v,\"m_hGroundEntity\",null);v.SetOrigin(v.GetOrigin()+Vector(0,0,20));v.ApplyAbsVelocityImpulse(Vector(0,0,30));", victim_id);
+
+                SetVariantString(buffer);
+                AcceptEntityInput(logic, "RunScriptCode");
+                RemoveEntity(logic);
+
+                //
+            }
+        }
+    }
+}
+#endif
+
+#if FIX_SPITTER_ACID_SPREAD
+void event_spit_burst(Event event, const char[] name, bool dontBroadcast)
+{
+    #if DEBUG_SPITTER
+    PrintToChatAll("[HR] event_spit_burst()");
+    #endif
+
+    if (IsValidEntity(g_spitter_projectile)) {
+
+        // Run VScript code.
+        //
+
+        int logic = CreateEntityByName("logic_script");
+        DispatchSpawn(logic);
+        char buffer[280];
+
+        // Source: https://steamcommunity.com/sharedfiles/filedetails/?id=2945425218
+        FormatEx(buffer, sizeof(buffer),"local p=EntIndexToHScript(%i);local s=EntIndexToHScript(%i);local pp=p.GetOrigin();local t={start=s.GetOrigin(),end=pp,mask=DirectorScript.TRACE_MASK_SHOT,ignore=p};TraceLine(t);if(\"enthit\" in t && t.enthit.GetClassname() in {prop_physics=0,prop_dynamic=0})s.SetOrigin(pp);", g_spitter_projectile, GetEventInt(event, "subject"));
+    
+        SetVariantString(buffer);
+        AcceptEntityInput(logic, "RunScriptCode");
+        RemoveEntity(logic);
+
+        //
+    }
+
+    #if DEBUG_SPITTER
+    else {
+        PrintToChatAll("[HR] event_spit_burst(): g_spitter_projectile IS INVALID!");
+    }
+    #endif
+}
+#endif
+
 void event_round_end(Event event, const char[] name, bool dontBroadcast)
 {
     on_end();
@@ -693,6 +1269,13 @@ void on_end()
     for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i) {
         g_si_recently_killed[i] = 0;
     }
+
+    #if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
+    for (int i = 0; i < 2; ++i) {
+        g_clear_in_attack2_timers[i].userid = 0;
+        delete g_clear_in_attack2_timers[i].timer;
+    }
+    #endif
 }
 
 public void OnServerEnterHibernation()
