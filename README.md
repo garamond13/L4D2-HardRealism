@@ -57,7 +57,7 @@ Optional game fixes:
 
 ## Compilation
 
-Depends on (required) [Actions](https://forums.alliedmods.net/showthread.php?p=2771520#post2771520).
+Optional dependency [Actions](https://forums.alliedmods.net/showthread.php?p=2771520#post2771520).
 
 Idealy compile with SourceMod version 1.12 or higher.  
 
@@ -74,6 +74,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 44.0.1
+- Minor refactoring.
 
 Version 44.0.0
 - Restore game fixes and make them optional.

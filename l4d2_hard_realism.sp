@@ -1,22 +1,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <dhooks>
-#include <actions>
-
-#pragma semicolon 1
-#pragma newdecls required
-
-// MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "44.0.0"
-
-public Plugin myinfo = {
-    name = "L4D2 HardRealism",
-    author = "Garamond",
-    description = "HardRealism mod",
-    version = VERSION,
-    url = "https://github.com/garamond13/L4D2-HardRealism"
-};
 
 // Optional game fixes
 #define FIX_FIREBULLETS 1
@@ -30,6 +14,28 @@ public Plugin myinfo = {
 #define FIX_SMOKER_INSTA_GRAB 1
 #define FIX_COMMONS_SHOVE_IMUNITY 1
 #define FIX_COMMONS_SHOVE_DIRECTION 1
+
+#if FIX_FIREBULLETS
+#include <dhooks>
+#endif
+
+#if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP || FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION
+#include <actions>
+#endif
+
+#pragma semicolon 1
+#pragma newdecls required
+
+// MAJOR (gameplay change).MINOR.PATCH
+#define VERSION "44.0.1"
+
+public Plugin myinfo = {
+    name = "L4D2 HardRealism",
+    author = "Garamond",
+    description = "HardRealism mod",
+    version = VERSION,
+    url = "https://github.com/garamond13/L4D2-HardRealism"
+};
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -372,7 +378,6 @@ Action on_take_damage_infected(int victim, int& attacker, int& inflictor, float&
 
         // Get modded damage.
         if (GetTrieValue(g_weapon_trie, classname[7], damage)) {
-        
             #if DEBUG_DAMAGE_MOD
             debug_on_take_damage(victim, attacker, inflictor, damage);
             #endif
@@ -421,7 +426,6 @@ Action on_take_damage_survivor(int victim, int& attacker, int& inflictor, float&
         char classname[12];
         GetEntityClassname(attacker, classname, sizeof(classname));
         if (!strcmp(classname, "infected")) {
-
             #if DEBUG_POSTURE
             static const char posture_type[][] = { "STAND", "CROUCH", "SIT", "CRAWL", "LIE" };
             int actual_posture = SDKCall(g_get_actual_posture, SDKCall(g_get_body_interface, SDKCall(g_my_next_bot_pointer, attacker)));
@@ -678,7 +682,6 @@ void fake_z_spawn_old(Handle timer, int data)
 {	
     // Further delay spawn if special infected we wished to spawn was killed recently.
     if (g_si_recently_killed[data] > 0) {
-
         #if DEBUG_SI_SPAWN
         PrintToChatAll("[HR] fake_z_spawn_old(): g_si_recently_killed[%s] = %i; RECREATING TIMER AND RETURNING!", g_debug_si_indexes[data], g_si_recently_killed[data]);
         #endif
@@ -995,7 +998,6 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 {
     #if FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION
     if (!strcmp(name, "InfectedShoved")) {
-        
         #if FIX_COMMONS_SHOVE_IMUNITY
         __action_setlistener(action, __action_processor_OnStart, infected_shoved_on_start, false);
         #endif
@@ -1028,11 +1030,10 @@ Action infected_shoved_on_start(any action, int actor, any priorAction, ActionRe
     // Get m_activity and check for landing.
     switch (LoadFromAddress(body_interface + view_as<Address>(80), NumberType_Int32)) {
         case
-            L4D2_ACT_TERROR_JUMP_LANDING,
-            L4D2_ACT_TERROR_JUMP_LANDING_HARD,
-            L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
-            L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
-
+        L4D2_ACT_TERROR_JUMP_LANDING,
+        L4D2_ACT_TERROR_JUMP_LANDING_HARD,
+        L4D2_ACT_TERROR_JUMP_LANDING_NEUTRAL,
+        L4D2_ACT_TERROR_JUMP_LANDING_HARD_NEUTRAL: {
             #if DEBUG_SHOVE
             PrintToChatAll("[HR] infected_shoved_on_start(): L4D2_ACT_TERROR_JUMP_LANDING");
             #endif
@@ -1091,7 +1092,6 @@ Action jockey_attack_on_resume(any action, int actor, any priorAction, ActionRes
     // We already have a timer?
     for (int i = 0; i < 2; ++i) {
         if (g_clear_in_attack2_timers[i].userid == userid) {
-
             #if DEBUG_JOCKEY
             PrintToChatAll("[HR] jockey_attack_on_resume(): We already have a timer!");
             #endif
@@ -1122,7 +1122,6 @@ void clear_in_attack2(Handle timer, int data)
 {
     int client = GetClientOfUserId(g_clear_in_attack2_timers[data].userid);
     if (client && IsClientInGame(client) && IsPlayerAlive(client)) {
-        
         #if (DEBUG_SHOVE || DEBUG_JOCKEY)
         int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
         PrintToChatAll("[HR] clear_in_attack2(): zombie_class = %s", g_debug_si_indexes[zombie_class - 1]);
@@ -1158,7 +1157,6 @@ void event_charger_carry_end(Event event, const char[] name, bool dontBroadcast)
 Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
     if (attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_SURVIVORS) {
-
         #if DEBUG_CHARGER
         PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %N, victim = %N", attacker, victim);
         #endif
@@ -1193,7 +1191,6 @@ void event_tongue_grab(Event event, const char[] name, bool dontBroadcast)
             GetClientAbsOrigin(GetClientOfUserId(GetEventInt(event, "userid")), smoker_origin);
             GetClientAbsOrigin(victim, victim_origin);
             if (smoker_origin[2] > victim_origin[2]) {
-
                 #if DEBUG_SMOKER
                 PrintToChatAll("[HR] event_tongue_grab(): smoker_origin.z > victim_origin.z");
                 #endif
