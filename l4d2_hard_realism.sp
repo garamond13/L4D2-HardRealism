@@ -14,6 +14,7 @@
 #define FIX_SMOKER_INSTA_GRAB 1
 #define FIX_COMMONS_SHOVE_IMUNITY 1
 #define FIX_COMMONS_SHOVE_DIRECTION 1
+#define FIX_BOTS_SHOOT_TROUGH_SURVIVORS 1
 
 #if FIX_FIREBULLETS
 #include <dhooks>
@@ -27,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "44.0.1"
+#define VERSION "45.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -269,9 +270,8 @@ public void OnConfigsExecuted()
         SetConVarInt(FindConVar(sv_force_time_of_day), 2);
     }
 
-    // Defaults to 300 in Versus.
     // Default 50.
-    SetConVarInt(FindConVar("tongue_break_from_damage_amount"), 300);
+    SetConVarInt(FindConVar("tongue_break_from_damage_amount"), 100);
 
     // Remove tongue victim inaccuracy.
     // Default 0.133.
@@ -305,6 +305,11 @@ public void OnConfigsExecuted()
     // Compensate for IDLE exploits fix.
     // Default 45.
     SetConVarInt(FindConVar("director_afk_timeout"), 30);
+    #endif
+
+    #if FIX_BOTS_SHOOT_TROUGH_SURVIVORS
+    // Default 1.
+    SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
     #endif
 }
 

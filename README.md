@@ -54,6 +54,7 @@ Optional game fixes:
 - Fix friendly fire while Charger carries survivor.
 - Fix Smoker insta grab.
 - Fix spitter acid spread.
+- Fix bots shoot trough survivors.
 
 ## Compilation
 
@@ -74,6 +75,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 45.0.0
+- Set tongue_break_from_damage_amount to 100.
+- Add optional fix: Fix bots shoot trough survivors.
 
 Version 44.0.1
 - Minor refactoring.
