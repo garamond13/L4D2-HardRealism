@@ -256,7 +256,7 @@ public void OnConfigsExecuted()
     SetConVarInt(FindConVar("z_jockey_limit"), 0);
     SetConVarInt(FindConVar("z_charger_limit"), 0);
 
-    char current_map[20];
+    char current_map[16];
     GetCurrentMap(current_map, sizeof(current_map));
     
     // Set to Morning(2), to always spawn wandering witches.
