@@ -76,6 +76,11 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 46.0.0
+- Set special infected max spawn time to 40s on the Normal difficulty.
+- Set base tank health to 5000 on the Normal difficulty.
+- Set special infected max spawn time to 26s on the Extreme difficulty.
+
 Version 45.0.1
 - Micro optimization.
 

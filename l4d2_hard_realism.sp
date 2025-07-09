@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "45.0.0"
+#define VERSION "46.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -242,8 +242,8 @@ void set_normal_difficulty()
     g_si_min_spawn_size = 2;
     g_si_max_spawn_size = MAX_SI;
     g_si_min_spawn_interval = 17.0;
-    g_si_max_spawn_interval = 35.0;
-    g_tank_base_health = 5200.0;
+    g_si_max_spawn_interval = 40.0;
+    g_tank_base_health = 5000.0;
 }
 
 public void OnConfigsExecuted()
@@ -344,7 +344,7 @@ Action command_hr_switchdifficulty(int client, int args)
             g_si_min_spawn_size = 3;
             g_si_max_spawn_size = MAX_SI;
             g_si_min_spawn_interval = 17.0;
-            g_si_max_spawn_interval = 24.0;
+            g_si_max_spawn_interval = 26.0;
             g_tank_base_health = 6000.0;
             PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
         }
