@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "46.0.0"
+#define VERSION "47.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -242,7 +242,7 @@ void set_normal_difficulty()
     g_si_min_spawn_size = 2;
     g_si_max_spawn_size = MAX_SI;
     g_si_min_spawn_interval = 17.0;
-    g_si_max_spawn_interval = 40.0;
+    g_si_max_spawn_interval = 39.0;
     g_tank_base_health = 5000.0;
 }
 
