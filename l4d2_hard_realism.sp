@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "47.0.0"
+#define VERSION "47.0.1"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -999,7 +999,7 @@ void set_pistol_ammo(Handle tiemr, Handle data)
 #endif // FIX_WEAPON_RELOAD
 
 #if FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION || FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
-public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
+public void OnActionCreated(BehaviorAction action, int actor, const char[] name, ActionId id)
 {
     #if FIX_COMMONS_SHOVE_IMUNITY || FIX_COMMONS_SHOVE_DIRECTION
     if (!strcmp(name, "InfectedShoved")) {

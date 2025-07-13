@@ -8,7 +8,7 @@ IMPORTANT NOTE: Put the game data l4d2_hard_realism.txt file into "sourcemod/gam
 IMPORTANT NOTE: HardRealism mode is designed for (based on) Realism Expert ("mp_gamemode realism" and "z_difficulty Impossible").
 
 Brief description:
-- Difficulties: Normal and Extreme.
+- Difficulties: Normal, Extreme and Max.
 - Get active difficulty with hr_getdifficulty command.
 - Cycle between difficulties with hr_switchdifficulty command.
 - Number of alive survivors is clamped to max 4.
@@ -19,16 +19,15 @@ Brief description:
 - Special Infected spawn sizes are random.
 - Special Infected time limits are relative to the active difficulty.
 - Special Infected min spawn time is 17s.
-- Special Infected max spawn time is 35s.
+- Special Infected max spawn time is 39s.
 - Special Infected spawn times are random.
 - Special Infected spawns are randomly delayed in the range [0.4s, 1.2s].
 - Always spawn wandering witches.
-- Set tongue_break_from_damage_amount to same value as in Versus.
+- Set tongue_break_from_damage_amount to 100.
 - Remove tongue victim inaccuracy.
 - Set Hunter claw damage to 20.
 - Set Jockey ride damage to 15.
 - Set jockey health to 290.
-- Set Jockey speed to 260.
 - Set Charger pound damage to 20.
 - Tank health is relative to the number of alive Survivors.
 - Tank is faster while on fire.
@@ -75,6 +74,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 ## Changelog
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
+
+Version 47.0.1
+- Update actions.
 
 Version 47.0.0
 - Set special infected max spawn time to 39s on the Normal difficulty.
