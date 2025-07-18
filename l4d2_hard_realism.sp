@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "47.0.1"
+#define VERSION "47.0.2"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -37,6 +37,10 @@ public Plugin myinfo = {
     version = VERSION,
     url = "https://github.com/garamond13/L4D2-HardRealism"
 };
+
+// Dev switches
+#define DISABLE_SI 0
+#define DISABLE_COMMONS 0
 
 // Debug switches
 #define DEBUG_DAMAGE_MOD 0
@@ -311,6 +315,10 @@ public void OnConfigsExecuted()
     // Default 1.
     SetConVarInt(FindConVar("sb_allow_shoot_through_survivors"), 0);
     #endif
+
+    #if DISABLE_COMMONS
+    SetConVarInt(FindConVar("z_common_limit"), 0);
+    #endif
 }
 
 Action command_hr_getdifficulty(int client, int args)
@@ -527,6 +535,10 @@ void event_player_left_safe_area(Event event, const char[] name, bool dontBroadc
 {
     #if DEBUG_SI_SPAWN
     PrintToChatAll("[HR] event_player_left_safe_area()");
+    #endif
+
+    #if DISABLE_SI
+    return;
     #endif
 
     start_spawn_timer();
