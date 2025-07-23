@@ -75,6 +75,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 47.0.3
+- Refactor friendly fire while Charger carries survivor fix.
+
 Version 47.0.2
 - Add dev switches.
 

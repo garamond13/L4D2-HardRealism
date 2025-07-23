@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "47.0.2"
+#define VERSION "47.0.3"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -1178,7 +1178,7 @@ Action on_take_damage_charger_carry(int victim, int& attacker, int& inflictor, f
         PrintToChatAll("[HR] on_take_damage_charger_carry(): attacker = %N, victim = %N", attacker, victim);
         #endif
 
-        return Plugin_Handled;
+        damage = 0.0;
     }
     return Plugin_Continue;
 }
