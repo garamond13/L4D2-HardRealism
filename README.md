@@ -75,6 +75,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 48.0.0
+- Reduce max special infected spawn size on 2 alive (or less) for Normal and Extreme difficulty.
+
 Version 47.0.4
 - Fix omission.
 

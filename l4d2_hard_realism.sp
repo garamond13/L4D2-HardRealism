@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "47.0.4"
+#define VERSION "48.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -56,9 +56,6 @@ public Plugin myinfo = {
 
 // From command "maxplayers".
 #define L4D2_MAXPLAYERS 18
-
-// Maximum number of alive special infected.
-#define MAX_SI 5
 
 // Teams
 #define TEAM_SURVIVORS 2
@@ -94,6 +91,8 @@ static const char g_debug_si_indexes[ZOMBIE_INDEX_SIZE][] = { "ZOMBIE_INDEX_SMOK
 Handle g_spawn_timer;
 Handle g_hr_istankinplay;
 int g_alive_survivors;
+int g_si_max_spawn_size_on_4;
+int g_si_max_spawn_size_on_2;
 int g_si_max_spawn_size;
 int g_si_min_spawn_size;
 float g_si_min_spawn_interval;
@@ -244,7 +243,8 @@ public void OnPluginStart()
 void set_normal_difficulty()
 {
     g_si_min_spawn_size = 2;
-    g_si_max_spawn_size = MAX_SI;
+    g_si_max_spawn_size_on_4 = 5;
+    g_si_max_spawn_size_on_2 = 4;
     g_si_min_spawn_interval = 17.0;
     g_si_max_spawn_interval = 39.0;
     g_tank_base_health = 5000.0;
@@ -350,15 +350,17 @@ Action command_hr_switchdifficulty(int client, int args)
         }
         case 1: {
             g_si_min_spawn_size = 3;
-            g_si_max_spawn_size = MAX_SI;
+            g_si_max_spawn_size_on_4 = 5;
+            g_si_max_spawn_size_on_2 = 4;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 26.0;
             g_tank_base_health = 6000.0;
             PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
         }
         case 2: {
-            g_si_min_spawn_size = MAX_SI;
-            g_si_max_spawn_size = MAX_SI;
+            g_si_min_spawn_size = 5;
+            g_si_max_spawn_size_on_4 = 5;
+            g_si_max_spawn_size_on_2 = 5;
             g_si_min_spawn_interval = 17.0;
             g_si_max_spawn_interval = 17.1;
             g_tank_base_health = 6000.0;
@@ -524,6 +526,14 @@ void count_alive_survivors()
     // Clamp to max 4.
     if (g_alive_survivors > 4) {
         g_alive_survivors = 4;
+    }
+
+    // Set the si max spawn size.
+    if (g_alive_survivors > 2) {
+        g_si_max_spawn_size = g_si_max_spawn_size_on_4;
+    }
+    else {
+        g_si_max_spawn_size = g_si_max_spawn_size_on_2;
     }
 
     #if DEBUG_SI_SPAWN
@@ -708,8 +718,8 @@ void fake_z_spawn_old(Handle timer, int data)
     }
 
     // Get all alive survivors.
+    int client; // index
     int[] clients = new int[MaxClients];
-    int client;
     for (int i = 1; i <= MaxClients; ++i) {
         if (IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVORS && IsPlayerAlive(i)) {
             clients[client++] = i; // We can't know who's last, so index will overflow!
