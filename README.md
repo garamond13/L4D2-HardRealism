@@ -75,6 +75,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 49.0.1
+- Round the new timer interval.
+
 Version 49.0.0
 - Further delay special infected spawn if we recently killed more special infected.
 

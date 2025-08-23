@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "49.0.0"
+#define VERSION "49.0.1"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -586,7 +586,7 @@ void auto_spawn_si(Handle timer)
 {
     // Further delay spawn if we recently killed more special infected.
     if (g_si_recently_killed_sum >= 2) {
-        float interval = 4.0 - (GetEngineTime() - g_si_recently_killed_time);
+        float interval = 4.0 - (GetEngineTime() - g_si_recently_killed_time) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
         g_spawn_timer = CreateTimer(interval, auto_spawn_si);
 
         #if DEBUG_SI_SPAWN
