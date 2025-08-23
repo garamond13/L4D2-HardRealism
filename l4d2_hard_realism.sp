@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "48.0.0"
+#define VERSION "49.0.0"
 
 public Plugin myinfo = {
     name = "L4D2 HardRealism",
@@ -100,6 +100,11 @@ float g_si_max_spawn_interval;
 
 // Keep the same order as zombie classes.
 int g_si_recently_killed[ZOMBIE_INDEX_SIZE];
+
+int g_si_recently_killed_sum;
+
+// HACK! Since we can't get remaining time from a timer, we have to do it somehow.
+float g_si_recently_killed_time;
 
 //
 
@@ -474,26 +479,38 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
             switch (GetEntProp(client, Prop_Send, "m_zombieClass")) {
                 case ZOMBIE_CLASS_SMOKER: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_SMOKER];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_SMOKER, TIMER_FLAG_NO_MAPCHANGE);
                 }
                 case ZOMBIE_CLASS_BOOMER: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_BOOMER];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_BOOMER, TIMER_FLAG_NO_MAPCHANGE);
                 }
                 case ZOMBIE_CLASS_HUNTER: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_HUNTER];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_HUNTER, TIMER_FLAG_NO_MAPCHANGE);
                 }
                 case ZOMBIE_CLASS_SPITTER: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_SPITTER];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_SPITTER, TIMER_FLAG_NO_MAPCHANGE);
                 }
                 case ZOMBIE_CLASS_JOCKEY: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_JOCKEY];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_JOCKEY, TIMER_FLAG_NO_MAPCHANGE);
                 }
                 case ZOMBIE_CLASS_CHARGER: {
                     ++g_si_recently_killed[ZOMBIE_INDEX_CHARGER];
+                    ++g_si_recently_killed_sum;
+                    g_si_recently_killed_time = GetEngineTime();
                     CreateTimer(delay, clear_recently_killed, ZOMBIE_INDEX_CHARGER, TIMER_FLAG_NO_MAPCHANGE);
                 }
             }
@@ -508,6 +525,7 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 void clear_recently_killed(Handle tiemr, int data)
 {
     --g_si_recently_killed[data];
+    --g_si_recently_killed_sum;
 }
 
 void count_alive_survivors()
@@ -566,6 +584,18 @@ void start_spawn_timer()
 
 void auto_spawn_si(Handle timer)
 {
+    // Further delay spawn if we recently killed more special infected.
+    if (g_si_recently_killed_sum >= 2) {
+        float interval = 4.0 - (GetEngineTime() - g_si_recently_killed_time);
+        g_spawn_timer = CreateTimer(interval, auto_spawn_si);
+
+        #if DEBUG_SI_SPAWN
+        PrintToChatAll("[HR] auto_spawn_si(): DELAYED! g_si_recently_killed_sum = %i; interval = %.2f", g_si_recently_killed_sum, interval);
+        #endif
+
+        return;
+    }
+
     // Count special infected.
     int si_type_counts[ZOMBIE_INDEX_SIZE];
     int si_total_count;
@@ -1294,6 +1324,7 @@ void on_end()
     for (int i = 0; i < ZOMBIE_INDEX_SIZE; ++i) {
         g_si_recently_killed[i] = 0;
     }
+    g_si_recently_killed_sum = 0;
 
     #if FIX_JOCKEY_INSTA_ATTACK_AFTER_LEAP
     for (int i = 0; i < 2; ++i) {
