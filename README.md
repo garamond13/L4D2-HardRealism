@@ -75,6 +75,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 50.0.0
+- Reduce special infected spam.
+
 Version 49.0.1
 - Round the new timer interval.
 
