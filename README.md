@@ -75,6 +75,10 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 51.0.0
+- Rework spawn timers.
+- Keep the same tank health for all difficulties.
+
 Version 50.0.1
 - Remove unnececary code.
 

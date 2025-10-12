@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "50.0.1"
+#define VERSION "51.0.0"
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -97,7 +97,7 @@ int g_si_max_spawn_size;
 int g_si_min_spawn_size;
 float g_si_min_spawn_interval;
 float g_si_max_spawn_interval;
-
+float g_si_spawn_interval;
 int g_si_recently_killed_sum;
 
 // HACK! Since we can't get remaining time from a timer, we have to do it somehow.
@@ -111,8 +111,6 @@ Handle g_weapon_trie;
 Handle g_my_next_bot_pointer;
 Handle g_get_body_interface;
 Handle g_get_actual_posture;
-
-float g_tank_base_health;
 
 // Normal(0), Extreme(1)
 int g_difficulty;
@@ -248,8 +246,7 @@ void set_normal_difficulty()
 	g_si_max_spawn_size_on_4 = 5;
 	g_si_max_spawn_size_on_2 = 4;
 	g_si_min_spawn_interval = 17.0;
-	g_si_max_spawn_interval = 39.0;
-	g_tank_base_health = 5000.0;
+	g_si_max_spawn_interval = 34.0;
 }
 
 public void OnConfigsExecuted()
@@ -356,7 +353,6 @@ Action command_hr_switchdifficulty(int client, int args)
 			g_si_max_spawn_size_on_2 = 4;
 			g_si_min_spawn_interval = 17.0;
 			g_si_max_spawn_interval = 26.0;
-			g_tank_base_health = 6000.0;
 			PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
 		}
 		case 2: {
@@ -365,7 +361,6 @@ Action command_hr_switchdifficulty(int client, int args)
 			g_si_max_spawn_size_on_2 = 5;
 			g_si_min_spawn_interval = 17.0;
 			g_si_max_spawn_interval = 17.1;
-			g_tank_base_health = 6000.0;
 			PrintToChatAll("[HR] Max difficulty set by %N.", client);
 		}
 	}
@@ -472,37 +467,11 @@ void event_player_death(Event event, const char[] name, bool dontBroadcast)
 
 		// Keep track of recently killed special infected.
 		if (client_team == TEAM_INFECTED) {
-			switch (GetEntProp(client, Prop_Send, "m_zombieClass")) {
-				case ZOMBIE_CLASS_SMOKER: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				case ZOMBIE_CLASS_BOOMER: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				case ZOMBIE_CLASS_HUNTER: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				case ZOMBIE_CLASS_SPITTER: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				case ZOMBIE_CLASS_JOCKEY: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				case ZOMBIE_CLASS_CHARGER: {
-					++g_si_recently_killed_sum;
-					g_si_recently_killed_time = GetEngineTime();
-					CreateTimer(g_si_min_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
-				}
+			int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
+			if (zombie_class >= 1 && zombie_class <= 6 /* any SI */) {
+				++g_si_recently_killed_sum;
+				g_si_recently_killed_time = GetEngineTime();
+				CreateTimer(g_si_spawn_interval, clear_recently_killed, 0, TIMER_FLAG_NO_MAPCHANGE);
 			}
 		}
 
@@ -563,11 +532,11 @@ void event_player_left_safe_area(Event event, const char[] name, bool dontBroadc
 
 void start_spawn_timer()
 {
-	float interval = GetRandomFloat(g_si_min_spawn_interval, g_si_max_spawn_interval) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
-	g_spawn_timer = CreateTimer(interval, auto_spawn_si);
+	g_si_spawn_interval = GetRandomFloat(g_si_min_spawn_interval, g_si_max_spawn_interval) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
+	g_spawn_timer = CreateTimer(g_si_spawn_interval, auto_spawn_si);
 
 	#if DEBUG_SI_SPAWN
-	PrintToChatAll("[HR] start_spawn_timer(): interval = %.2f", interval);
+	PrintToChatAll("[HR] start_spawn_timer(): interval = %.2f", g_si_spawn_interval);
 	#endif
 }
 
@@ -575,7 +544,7 @@ void auto_spawn_si(Handle timer)
 {
 	// Further delay spawn if we recently killed more special infected.
 	if (g_si_recently_killed_sum >= g_si_min_spawn_size) {
-		float interval = g_si_min_spawn_interval - (GetEngineTime() - g_si_recently_killed_time) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
+		float interval = g_si_spawn_interval - (GetEngineTime() - g_si_recently_killed_time) + 0.05; // Round to one decimal place since min timer accuracy is 0.1s.
 		g_spawn_timer = CreateTimer(interval, auto_spawn_si);
 
 		#if DEBUG_SI_SPAWN
@@ -779,7 +748,7 @@ void event_tank_spawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int userid = GetEventInt(event, "userid");
 	int client = GetClientOfUserId(userid);
-	int tank_hp = RoundToNearest(g_tank_base_health * Pow(float(g_alive_survivors), 0.8));
+	int tank_hp = RoundToNearest(5000.0 * Pow(float(g_alive_survivors), 0.8));
 	SetEntProp(client, Prop_Data, "m_iMaxHealth", tank_hp);
 	SetEntProp(client, Prop_Data, "m_iHealth", tank_hp);
 
@@ -860,7 +829,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		#if FIX_STAGGERED_ATTACK
 		if (GetClientTeam(client) == TEAM_INFECTED) {
 			int zombie_class = GetEntProp(client, Prop_Send, "m_zombieClass");
-			if (zombie_class >= 1 && zombie_class <= 6 && GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) > -1.0) {
+			if (zombie_class >= 1 && zombie_class <= 6 /* any SI */ && GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) > -1.0) {
 				buttons &= ~IN_ATTACK2;
 			}
 		}
