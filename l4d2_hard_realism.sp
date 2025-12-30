@@ -28,7 +28,7 @@
 #pragma newdecls required
 
 // MAJOR (gameplay change).MINOR.PATCH
-#define VERSION "51.0.0"
+#define VERSION "52.0.0"
 
 public Plugin myinfo = {
 	name = "L4D2 HardRealism",
@@ -91,9 +91,6 @@ static const char g_debug_si_indexes[ZOMBIE_INDEX_SIZE][] = { "ZOMBIE_INDEX_SMOK
 Handle g_spawn_timer;
 Handle g_hr_istankinplay;
 int g_alive_survivors;
-int g_si_max_spawn_size_on_4;
-int g_si_max_spawn_size_on_2;
-int g_si_max_spawn_size;
 int g_si_min_spawn_size;
 float g_si_min_spawn_interval;
 float g_si_max_spawn_interval;
@@ -243,8 +240,6 @@ public void OnPluginStart()
 void set_normal_difficulty()
 {
 	g_si_min_spawn_size = 2;
-	g_si_max_spawn_size_on_4 = 5;
-	g_si_max_spawn_size_on_2 = 4;
 	g_si_min_spawn_interval = 17.0;
 	g_si_max_spawn_interval = 34.0;
 }
@@ -349,16 +344,12 @@ Action command_hr_switchdifficulty(int client, int args)
 		}
 		case 1: {
 			g_si_min_spawn_size = 3;
-			g_si_max_spawn_size_on_4 = 5;
-			g_si_max_spawn_size_on_2 = 4;
 			g_si_min_spawn_interval = 17.0;
 			g_si_max_spawn_interval = 26.0;
 			PrintToChatAll("[HR] Extreme difficulty set by %N.", client);
 		}
 		case 2: {
 			g_si_min_spawn_size = 5;
-			g_si_max_spawn_size_on_4 = 5;
-			g_si_max_spawn_size_on_2 = 5;
 			g_si_min_spawn_interval = 17.0;
 			g_si_max_spawn_interval = 17.1;
 			PrintToChatAll("[HR] Max difficulty set by %N.", client);
@@ -504,14 +495,6 @@ void count_alive_survivors()
 		g_alive_survivors = 4;
 	}
 
-	// Set the si max spawn size.
-	if (g_alive_survivors > 2) {
-		g_si_max_spawn_size = g_si_max_spawn_size_on_4;
-	}
-	else {
-		g_si_max_spawn_size = g_si_max_spawn_size_on_2;
-	}
-
 	#if DEBUG_SI_SPAWN
 	PrintToChatAll("[HR] count_alive_survivors(): (AFTER CLAMP!) g_alive_survivors = %i", g_alive_survivors);
 	#endif
@@ -609,16 +592,17 @@ void auto_spawn_si(Handle timer)
 	}
 
 	// Spawn special infected.
-	if (si_total_count < g_si_max_spawn_size) {
+	static const int si_max_spawn_size = 5;
+	if (si_total_count < si_max_spawn_size) {
 		
 		// Set spawn size.
-		int size = g_si_max_spawn_size - si_total_count;
+		int size = si_max_spawn_size - si_total_count;
 		if (size > g_si_min_spawn_size) {
 			size = GetRandomInt(g_si_min_spawn_size, size);
 		}
 
 		#if DEBUG_SI_SPAWN
-		PrintToChatAll("[HR] auto_spawn_si(): g_si_max_spawn_size = %i; si_total_count = %i; size = %i", g_si_max_spawn_size, si_total_count, size);
+		PrintToChatAll("[HR] auto_spawn_si(): g_si_max_spawn_size = %i; si_total_count = %i; size = %i", si_max_spawn_size, si_total_count, size);
 		#endif
 
 		// Keep the same order as zombie classes.
@@ -685,7 +669,7 @@ void auto_spawn_si(Handle timer)
 
 	#if DEBUG_SI_SPAWN
 	else {
-		PrintToConsoleAll("[HR] auto_spawn_si(): g_si_max_spawn_size = %i; si_total_count = %i; SI LIMIT REACHED!", g_si_max_spawn_size, si_total_count);
+		PrintToConsoleAll("[HR] auto_spawn_si(): g_si_max_spawn_size = %i; si_total_count = %i; SI LIMIT REACHED!", si_max_spawn_size, si_total_count);
 	}
 	#endif
 

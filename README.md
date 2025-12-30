@@ -75,6 +75,9 @@ If you don't know how to compile it into SourceMod plugin (.smx) see https://wik
 
 Version scheme: MAJOR (gameplay change).MINOR.PATCH
 
+Version 52.0.0
+- Revert: Reduce max special infected spawn size on 2 alive (or less) for Normal and Extreme difficulty.
+
 Version 51.0.0
 - Rework spawn timers.
 - Keep the same tank health for all difficulties.
